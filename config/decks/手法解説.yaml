@@ -1,0 +1,29 @@
+# =============================================================================
+# 分析手法解説（インナー向け）: 何をどう分析したかを、実際の設定値・結果を引きながら解説する社内資料。
+# レポート本体と同じ中間データ・設定から生成するので、数値とロジックがレポートと必ず一致する。
+# =============================================================================
+name: 分析手法解説（社内向け）
+filename: "{client}_{fy}_分析手法解説_社内向け.pptx"
+slides:
+  - {type: cover, title: 職員エンゲージメント調査 分析手法解説, subtitle_suffix: "（社内向け）"}
+  - type: toc
+  - {type: section, no: 1, title: 全体像と入力データ}
+  - type: m_pipeline
+  - type: m_inputs
+  - type: m_question_structure
+  - {type: section, no: 2, title: スコアと集計}
+  - type: m_scoring
+  - type: m_aggregation
+  - type: m_yoy
+  - type: m_significance
+  - {type: section, no: 3, title: 高度分析}
+  - type: m_segmentation
+  - type: m_key_driver
+  - type: m_comments
+  - {type: section, no: 4, title: 判定・示唆・成果物}
+  - type: m_judgement
+  - type: m_insights
+  - type: m_outputs
+  - type: m_config_files
+  - type: m_qa
+  - type: m_limitations

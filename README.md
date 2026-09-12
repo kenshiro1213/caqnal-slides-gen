@@ -1,1 +1,55 @@
 # caqnal-slides-gen
+
+CAQNAL 自治体エンゲージメント調査の分析レポート（PPTX / PDF / Excel）を、自治体ごとの設定ファイル差し替えだけで量産する Python パイプライン。
+
+```
+回答 CSV + 設問マスタ xlsx  ──►  caqnal profile / init（ヘッダー・設問を YAML 化）
+        │
+        ▼
+client.yaml / questions.yaml / yoy_map.yaml  ──►  caqnal analyze（集計・KD・4類型・判定 → intermediate/）
+        │
+        ▼
+config/decks/*.yaml + カクナルスライド.pptx  ──►  caqnal render（全庁 / 部局別×N / 1pager / 手法解説（社内向け） / 詳細集計 Excel / PDF）
+```
+
+## セットアップ
+```bash
+uv sync
+uv run caqnal --help
+```
+PDF 出力には LibreOffice（`brew install --cask libreoffice`）と Noto Sans JP フォントのインストールが必要。
+
+## 使い方（八戸市の例）
+```bash
+uv run caqnal validate --client 八戸市        # 入力チェック
+uv run caqnal analyze  --client 八戸市        # → local-governments/八戸市/output/intermediate/
+uv run caqnal render   --client 八戸市 --pdf  # → output/*.pptx, 部局別/*.pptx, 分析手法解説_社内向け.pptx, *.xlsx, *.pdf
+uv run caqnal all      --client 八戸市 --pdf  # 上記を一括
+uv run caqnal verify   --client 八戸市        # 2回実行してバイト一致を確認
+uv run pytest                                 # 合成データでの回帰テスト
+```
+新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
+
+## ディレクトリ
+| パス | 内容 |
+|---|---|
+| `src/caqnal_report/` | `cli` / `config` / `ingest`（取込・プロファイル・設問マスタ・経年・検証）/ `analysis`（スコア・集計・ランキング・4類型・KD・自由記述・判定・示唆）/ `render`（テーマ・図表・PPTX・Excel・PDF） |
+| `config/` | `analysis_defaults.yaml`（仕様書 §9 閾値）/ `theme.yaml`（色・フォント・座標）/ `action_library.yaml` / `comment_themes.yaml` / `decks/`（スライド構成） |
+| `local-governments/<自治体>/` | `client.yaml` `questions.yaml` `yoy_map.yaml` `profile/` `RENAME_MEMO.md`（git 管理）、`data/` `output/`（git 管理外） |
+| `slides-master/` | カクナルスライド.pptx（テンプレート） |
+| `spec/` | 分析レポート制作 仕様書（docx） |
+| `docs/` | 仕様書要約・スライドマスター仕様・データ形式メモ・参考実装メモ・計画・オンボーディング手順（原本を開かずに参照するための md） |
+| `tests/` | 合成データ（八戸市スキーマ、seed 固定）による回帰テスト |
+
+## 設計の要点
+- 3 ステージはファイルでのみ結合（`data/` → `output/intermediate/` → `output/*.pptx`）。render は中間 CSV/JSON だけを読む
+- スライド構成は `config/decks/*.yaml` のリスト。`type` は `render/slides.py`（レポート）と `render/slides_method.py`（手法解説）の REGISTRY。部局別は `scope` を置換して部局数分生成
+- `手法解説` デッキは同じ中間データ・設定から「何をどう分析したか」を社内向けに解説する。閾値・n・モデル統計はレポートと必ず一致する
+- 閾値・匿名性・対象設問は全て YAML（仕様書 §13 再現性要件）。解析時の設定は `settings_snapshot.yaml` に保存
+- 尺度は自治体ごとに `client.yaml: scales` で定義（八戸市は ①=5 の逆順、佐賀市は 5=5 の正順）
+- 経年比較は設問番号ではなく設問文で対応付け（`yoy_map.yaml`、比較可／参考比較／比較不可）
+- PPTX は zip タイムスタンプを固定してバイト一致。PNG は matplotlib メタデータを除去
+- フォントは Noto Sans JP 既定。`config/theme.yaml: font.preset: meiryo` で Meiryo UI に切替
+
+## 生データの扱い
+`local-governments/*/data/`、`*/output/`、`*_PII*` は `.gitignore` で除外。自治体名・列名・設問文・値分布（`profile/`）のみを追跡する。

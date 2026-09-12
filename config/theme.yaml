@@ -1,0 +1,72 @@
+# =============================================================================
+# 描画テーマ: 色・フォント・スライド座標
+# 出典: docs/スライドマスター仕様.md（カクナルスライド.pptx の CQL配色）
+# =============================================================================
+template: slides-master/カクナルスライド.pptx
+master_index: 3                       # 日本語レイアウトを持つスライドマスター
+layouts:
+  cover: 表紙
+  body: 本文1（センター）
+  section: 中表紙
+  appendix: 中表紙（APPENDIX）
+  toc: {master: 1, name: TITLE_2}      # テンプレ2枚目「目次」と同じレイアウト（左に金色の帯、右に項目）
+
+slide:
+  width_in: 10.0
+  height_in: 5.625
+  title:    {x: 0.30, y: 0.00, w: 7.5, h: 0.325}
+  lead:     {x: 0.21, y: 0.36, w: 9.55, h: 0.42}
+  content:  {x: 0.45, y: 0.85, w: 9.10, h: 4.22}
+  footnote: {x: 0.45, y: 5.08, w: 8.40, h: 0.30}
+  page_number: {x: 9.40, y: 5.31, w: 0.59, h: 0.30}
+  dpi: 200
+
+font:
+  preset: noto                         # noto | meiryo
+  presets:
+    noto:
+      family: Noto Sans JP
+      regular: assets/fonts/NotoSansJP-Regular.ttf
+      bold: assets/fonts/NotoSansJP-Bold.ttf
+    meiryo:
+      family: Meiryo UI               # Windows 同梱。Mac では PDF 変換時に代替される
+      regular: null                   # matplotlib 用ファイルが無い場合は Noto にフォールバック
+      bold: null
+  size:
+    title: 14
+    lead: 10
+    body: 9
+    small: 7.5
+    kpi: 26
+
+colors:
+  ink: "353636"
+  ink_soft: "808484"
+  line: "CECFCF"
+  bg: "FFFFFF"
+  bg_soft: "F5F1E6"
+  brand: "CAA44A"
+  brand_dark: "876A27"
+  brand_pale: "EDDFC0"
+  brand_light: "DECB72"
+  positive: "2196F3"
+  positive_soft: "BBDEFB"
+  negative: "E91E63"
+  negative_soft: "F8BBD0"
+  neutral: "CECFCF"
+  # 回答分布（肯定→否定）
+  dist: ["1976D2", "64B5F6", "CECFCF", "F48FB1", "C2185B"]
+  # 4類型（quadrant キーで固定）
+  segments:
+    high_high: "2196F3"
+    high_low: "CAA44A"
+    low_high: "9E9E9E"
+    low_low: "E91E63"
+  # Key Driver ゾーン
+  zones:
+    A: "E91E63"
+    B: "2196F3"
+    C: "CAA44A"
+    D: "9E9E9E"
+  # ヒートマップ（発散: 低=桃 / 0=白 / 高=青）
+  heatmap: {low: "E91E63", mid: "FFFFFF", high: "2196F3"}

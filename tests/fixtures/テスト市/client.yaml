@@ -1,0 +1,98 @@
+# =============================================================================
+# 八戸市 令和8年度 エンゲージメント調査 設定（仕様書 Appendix A に対応）
+# 閾値は config/analysis_defaults.yaml を継承。案件固有の値のみ analysis: で上書きする。
+# =============================================================================
+client:
+  name: テスト市
+  honorific: テスト市 御中
+  fiscal_year: R8
+  fiscal_year_label: 令和8年度
+  survey_title: 職員エンゲージメント調査
+  report_title: 職員エンゲージメント調査 分析レポート
+  report_date: 2026年9月
+  survey_period: 2026年7月            # 回答 CSV のファイル名日付（20260721）から推定。要確認
+  target_count: null                  # 対象者数（不明のため回答率は「－」表示）
+
+data:
+  responses: data/R8_回答.csv
+  encoding: utf-8-sig
+  respondent_id: {source: row_index, prefix: R8-}   # 回答者ID列が無いため行番号で匿名ID採番
+  previous:
+    - fiscal_year: R7
+      fiscal_year_label: 令和7年度
+      responses: data/R7_回答.csv
+      questions: questions_R7.yaml
+      yoy_map: yoy_map.yaml
+
+questions: questions.yaml
+label_normalize: strip_circled_prefix   # 「①そう思う」→「そう思う」
+
+scales:
+  agree5:                             # ①が最良。数値化は ①→5 … ⑤→1
+    labels: {そう思う: 5, ややそう思う: 4, どちらともいえない: 3, あまりそう思わない: 2, そう思わない: 1}
+    positive: [5, 4]
+    neutral: [3]
+    negative: [2, 1]
+    excluded: []                      # 「わからない」等があればここに（分母から除外）
+    min: 1
+    max: 5
+
+attributes:                           # key = 表示名。order = 表示順（ラベルは丸数字除去後）
+  性別:       {question: Q1, order: [男性, 女性, 答えない]}
+  役職:       {question: Q2, order: [一般職, 管理職（課長級以上）], short: {管理職（課長級以上）: 管理職}}
+  年代:       {question: Q3, order: [10・20代, 30代, 40代, 50代, 60代以上]}
+  勤続年数:   {question: Q4, order: [3年未満, 3年以上10年未満, 10年以上20年未満, 20年以上]}
+  入庁前経験: {question: Q6, order: [民間経験あり, 他自治体等（国・都道府県・市区町村）経験あり, ①②両方あり, なし],
+              short: {他自治体等（国・都道府県・市区町村）経験あり: 他自治体等経験あり, ①②両方あり: 民間・他自治体両方}}
+
+organization:
+  levels: [部局]                      # 課レベルの回答項目は無い
+  question: Q5
+  units:                              # 設問マスタ xlsx の選択肢順 = 表示順
+    - 危機管理部
+    - 総合政策部
+    - 総務部
+    - 財政部
+    - 商工労働まちづくり部
+    - 観光文化スポーツ部
+    - 農林水産部
+    - 福祉部
+    - こども健康部
+    - 市民環境部
+    - 建設部
+    - 都市整備部
+    - 出納室
+    - 交通部
+    - 教育委員会
+    - 監査委員事務局
+    - 議会事務局
+    - 広域市町村圏事務組合
+
+indicators:
+  overall_engagement:
+    name: 総合エンゲージメント
+    questions: [Q58, Q59, Q60]        # 満足・推奨・継続意向（仕様書3-2 標準3指標は本設問に無いため）
+  働きがい:   {name: 働きがい, from_axis: 働きがい}
+  働きやすさ: {name: 働きやすさ, from_axis: 働きやすさ}
+
+segmentation:                         # 4類型（仕様書4-5）
+  x: overall_engagement
+  y: 働きやすさ
+  x_label: エンゲージメント
+  y_label: 働きやすさ（環境・支援）
+  labels: {high_high: 活躍実感型, high_low: 意欲先行型, low_high: 環境充足型, low_low: 要支援型}
+
+positioning:                          # 組織ポジショニング（仕様書4-6）
+  x: 働きがい
+  y: 働きやすさ
+
+key_driver:
+  target: overall_engagement
+  exclude: [Q56]                      # 管理職限定設問は KD から除外
+
+comments:
+  question: Q61
+
+decks: [全庁, 部局別, 1pager, 手法解説]   # 手法解説 = インナー向け 分析手法の解説資料
+
+analysis: {}                          # 標準閾値からの上書きなし

@@ -1,0 +1,61 @@
+# =============================================================================
+# 解析パラメータの標準案（仕様書 §2-2, §4, §9, §9-1）
+# 案件固有の値は local-governments/<自治体>/client.yaml の analysis: で上書きする。
+# 委託先が独自に変更してはいけない項目（§12-1）。変更は CAQNAL 承認後に client.yaml 側で行う。
+# =============================================================================
+anonymity:
+  min_n: 5                 # 組織・属性の回答者数がこれ未満 → 非表示
+  min_comments: 5          # 自由記述の件数がこれ未満 → 非表示
+
+score:
+  decimals_mean: 2         # 平均の表示桁
+  decimals_pct: 0          # 割合の表示桁
+  indicator_min_answer_ratio: 0.5   # 結果指標の構成設問の過半が欠損なら算出しない
+
+significance:
+  alpha: 0.05
+  mean_test: welch         # 平均差: Welch の t 検定
+  proportion_test: two_proportion_z
+
+judgement:                 # §9 自動判定 標準案（5段階平均ベース）
+  high:  {top_pct: 20, positive_pct_at_least: 65}     # 高評価: 全庁上位20% または 肯定率65%以上
+  low:   {bottom_pct: 20, negative_pct_at_least: 20}  # 低評価: 全庁下位20% または 否定率20%以上
+  improved_at_least: 0.10                             # 改善: 前年差 +0.10 以上
+  worsened_at_most: -0.10                             # 悪化: 前年差 -0.10 以下
+  org_gap_abs_at_least: 0.15                          # 全庁比特徴: 全庁差 ±0.15 以上
+  high_impact_top_pct: 25                             # 高影響: Key Driver 上位25%
+  high_sd_top_pct: 20                                 # ばらつき大: SD 上位20%
+  priority_issue_min_signals: 3                       # 重点課題候補: 6観点のうち3以上
+  comment_link_min_count: 5                           # 自由記述接続: 同テーマ件数がこれ以上
+
+priority_org:              # §9-1 重点部局 加点
+  points:
+    overall_bottom_pct: 2      # 総合エンゲージメントが全庁下位20%
+    worsened: 2                # 前年差が悪化（worsened_at_most 以下）
+    org_gap_negative: 2        # 全庁差 ≤ -org_gap_abs_at_least
+    driver_low: 2              # Key Driver 上位項目が低評価
+    comment_theme: 1           # 自由記述で同テーマの改善要望が多い
+    support_type_gap: 1        # 要支援型が全庁比 +10pt 以上
+  support_type_gap_pt: 10
+  bands: {priority: 6, watch: 3}   # ≥6 重点フォロー候補 / 3〜5 要注視 / ≤2 通常
+  good_practice: {top_pct: 20, improved_at_least: 0.05}   # 好事例候補: 高水準 × 改善
+
+ranking:
+  top_n: 10
+  org_gap_top_n: 5
+
+key_driver:
+  method: [pearson, ols]   # 相関 + 標準化重回帰（VIF 併記）
+  min_n: 30                # 相関に必要な最小ペア数
+  dept_min_n: 30           # 部局別 KD を出す最小 n（相関のみ）
+  ols_min_ratio: 5         # 重回帰は n ≥ 説明変数数 × この値 のときのみ
+  top_n: 10
+  score_split: median      # Impact×Score の現状スコア高低のしきい値
+
+segmentation:
+  threshold: mean          # mean | median | fixed
+  fixed_value: null
+  trend_threshold: current # 経年比較のしきい値: current（当年で固定） | each
+
+quadrant:                  # 当年スコア × 前年差 4象限（§5-2）
+  labels: {high_up: 維持, low_up: 改善途上, high_down: 要注視, low_down: 最優先}

@@ -1,0 +1,5 @@
+# Executive One Pager（仕様書 §6-1）。1 枚のみ。
+name: Executive One Pager
+filename: "{client}_{fy}_ExecutiveOnePager.pptx"
+slides:
+  - {type: exec_onepage, standalone: true}

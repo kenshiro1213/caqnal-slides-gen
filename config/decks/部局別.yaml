@@ -1,0 +1,15 @@
+# =============================================================================
+# 部局別レポート（6P 標準、仕様書 §6-2）。scope: $org は部局ごとに置換され、部局数分の pptx を生成する。
+# n < min_n の部局は生成しない（一覧に「非表示」として残す）。
+# =============================================================================
+name: 部局別レポート
+filename: "部局別/{client}_{fy}_{scope}.pptx"
+per_org: true
+slides:
+  - {type: cover, subtitle_suffix: "{scope}"}
+  - {type: dept_summary}                 # 1 部局サマリー（KPI・全庁差・前年差・所見3点）
+  - {type: dept_category_questions}      # 2 カテゴリー結果・強みTOP3・課題TOP3
+  - {type: dept_trend}                   # 3 経年変化
+  - {type: dept_segments}                # 4 職員タイプ
+  - {type: dept_key_driver}              # 5 Key Driver
+  - {type: dept_actions}                 # 6 アクション仮説

@@ -1,0 +1,15 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+*.egg-info/
+
+# 生の調査データ・生成物は追跡しない（自治体名・ヘッダー情報は client.yaml / questions.yaml / profile/ に保存）
+local-governments/*/data/
+local-governments/*/output/
+**/*_PII*
+~$*.pptx
+tests/fixtures/*/data/
+tests/fixtures/*/output/
