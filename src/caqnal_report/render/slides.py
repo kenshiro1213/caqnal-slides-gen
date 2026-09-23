@@ -17,7 +17,7 @@ from ..analysis.pipeline import AnalysisResult
 from ..analysis.segmentation import QUADRANTS
 from ..config import ClientConfig
 from . import charts as ch
-from .charts import fmt, fmt_pct, wrap_cjk
+from .charts import fmt, fmt_pct
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches
 
@@ -299,7 +299,8 @@ def s_exec_onepage(slide, ctx: Ctx, spec: dict):
     else:
         add_text(slide, th, x, y3, 4.4, 0.24, "位置づけ", size=9, bold=True, color=th.hexv("brand_dark"))
         add_text(slide, th, x, y3 + 0.24, 4.4, h3 - 0.24,
-                 f"重点フォロー区分: {ins.get('priority_band') or '－'}（加点 {ins.get('priority_points', '－')}）", size=8)
+                 f"重点フォロー区分: {ins.get('priority_band') or '－'}"
+                 f"（加点 {'－' if ins.get('priority_points') is None else ins['priority_points']}）", size=8)
     add_text(slide, th, x + 4.6, y3, 4.5, 0.24, "施策の方向性（検討候補）", size=9, bold=True, color=th.hexv("brand_dark"))
     add_text(slide, th, x + 4.6, y3 + 0.24, 4.5, h3 - 0.24,
              [sen.get("hint", ""), sen.get("action", "")], size=7.5)
@@ -422,7 +423,7 @@ def s_overall_kpi(slide, ctx: Ctx, spec: dict):
     labels, dists = [], []
     for q in qids:
         if q in dist.index:
-            labels.append(ctx.qtext(q, 24))
+            labels.append(ctx.qtext(q))
             dists.append([dist.loc[q, f"s{int(v)}"] for _, v in order])
     px = x + cw + 0.2
     pw = w - cw - 0.2
@@ -436,7 +437,7 @@ def s_overall_kpi(slide, ctx: Ctx, spec: dict):
         r = ctx.row("設問", q)
         if r is None:
             continue
-        rows.append([ctx.qtext(q, 30), fmt(r["mean"]), fmt(r["prev_mean"]), fmt(r["diff_yoy"], signed=True) + _ref_mark(r["yoy_status"]),
+        rows.append([ctx.qtext(q), fmt(r["mean"]), fmt(r["prev_mean"]), fmt(r["diff_yoy"], signed=True) + _ref_mark(r["yoy_status"]),
                      fmt_pct(r["pos"]), fmt_pct(r["neg"])])
         if r["sig_yoy"]:
             fills[(i, 3)] = th.hexv("positive_soft") if r["sig_yoy"] > 0 else th.hexv("negative_soft")
@@ -583,7 +584,7 @@ def s_quadrant_yoy(slide, ctx: Ctx, spec: dict):
                            quadrant_text={"tl": labels["low_up"], "tr": labels["high_up"], "bl": labels["low_down"], "br": labels["high_down"]})
     place_image(slide, th, p, x, y, 6.1, h, align="left")
     pri = d[d["quadrant"] == labels["low_down"]].sort_values("diff_yoy").head(9)
-    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": f"{wrap_cjk(r['text'], 22, 1)}  {fmt(r['mean'])} / {fmt(r['diff_yoy'], signed=True)}", "size": 7.5}]
+    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": f"{r['text']}  {fmt(r['mean'])} / {fmt(r['diff_yoy'], signed=True)}", "size": 7.5}]
              for _, r in pri.iterrows()]
     add_text(slide, th, x + 6.2, y, 2.9, 0.25, f"{labels['low_down']}（低スコア × 悪化）", size=9, bold=True, color=th.hexv("negative"))
     bullets(slide, th, x + 6.2, y + 0.27, 2.9, h - 0.3, items or ["該当なし"], size=7.5, marker="", spacing=1.05)
@@ -605,7 +606,7 @@ def s_dispersion(slide, ctx: Ctx, spec: dict):
                            xline=float(d["mean"].median()), yline=thr, xlabel="平均", ylabel="標準偏差", w=6.0, h=h, colors=cols,
                            quadrant_text={"tl": "低評価 × 意見が分かれる", "tr": "高評価 × 意見が分かれる"})
     place_image(slide, th, p, x, y, 6.1, h, align="left")
-    items = [[{"text": f"{r['unit']} ", "bold": True}, {"text": f"{wrap_cjk(ctx.qtext(r['unit']), 22, 1)}  SD {fmt(r['sd'])} / 平均 {fmt(r['mean'])}", "size": 7.5}]
+    items = [[{"text": f"{r['unit']} ", "bold": True}, {"text": f"{ctx.qtext(r['unit'])}  SD {fmt(r['sd'])} / 平均 {fmt(r['mean'])}", "size": 7.5}]
              for _, r in hi.head(10).iterrows()]
     add_text(slide, th, x + 6.2, y, 2.9, 0.25, "ばらつきが大きい設問", size=9, bold=True, color=th.hexv("negative"))
     bullets(slide, th, x + 6.2, y + 0.27, 2.9, h - 0.3, items or ["該当なし"], size=7.5, marker="", spacing=1.05)
@@ -743,7 +744,7 @@ def s_kd_correlation(slide, ctx: Ctx, spec: dict):
             + ("" if src == ctx.scope_type else f"※{ctx.scope}は n<{ctx.cfg.analysis['key_driver']['dept_min_n']} のため全庁の結果。"))
     _frame(slide, ctx, spec, "Key Driver 分析① 相関", lead, footnote=_kd_footnote(ctx, src))
     x, y, w, h = ctx.content()
-    labels = [f"{r['question_id']} {ctx.qtext(r['question_id'], 24)}" for _, r in top.iterrows()]
+    labels = [f"{r['question_id']} {ctx.qtext(r['question_id'])}" for _, r in top.iterrows()]
     cols = [th.zone_color(z) for z in top["zone"]]
     p = ch.hbar_scores(th, ctx.chart("kd_corr"), labels, top["r"].tolist(), xlim=(0, 0.7), w=6.4, h=h, colors=cols, font=7,
                        label_chars=22, left=0.42)
@@ -771,8 +772,8 @@ def s_kd_regression(slide, ctx: Ctx, spec: dict):
     _frame(slide, ctx, spec, "Key Driver 分析② 重回帰（統制後の関連）", lead, footnote=_kd_footnote(ctx, src))
     x, y, w, h = ctx.content()
     cols = [{"id": "rk", "title": "順位", "width": 0.45, "kind": "num"},
-            {"id": "q", "title": "設問", "width": 4.6, "kind": "text", "chars": 40},
-            {"id": "cat", "title": "カテゴリ", "width": 1.25, "kind": "text", "chars": 10},
+            {"id": "q", "title": "設問", "width": 4.2, "kind": "text", "chars": 40},
+            {"id": "cat", "title": "カテゴリ", "width": 1.65, "kind": "text", "chars": 14},
             {"id": "r", "title": "相関 r", "width": 0.6, "kind": "num"},
             {"id": "beta", "title": "β", "width": 0.6, "kind": "num"},
             {"id": "vif", "title": "VIF", "width": 0.5, "kind": "num"},
@@ -804,7 +805,7 @@ def s_kd_impact_score(slide, ctx: Ctx, spec: dict):
                   colors=cols, quadrant_text={"tl": "A 最優先改善", "tr": "B 重要な強み", "bl": "C 二次課題", "br": "D 維持領域"},
                   size_scale=1.0, zone_fill={"tl": th.zone_color("A"), "tr": th.zone_color("B"), "bl": th.zone_color("C"), "br": th.zone_color("D")})
     place_image(slide, th, p, x, y, 6.1, h, align="left")
-    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": f"{wrap_cjk(ctx.qtext(r['question_id']), 22, 1)}  r={fmt(r['r'])} / 現状 {fmt(r['score'])}", "size": 7.5}]
+    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": f"{ctx.qtext(r['question_id'])}  r={fmt(r['r'])} / 現状 {fmt(r['score'])}", "size": 7.5}]
              for _, r in a.head(10).iterrows()]
     add_text(slide, th, x + 6.2, y, 2.9, 0.25, "A 最優先改善（高影響 × 低スコア）", size=9, bold=True, color=th.hexv("negative"))
     bullets(slide, th, x + 6.2, y + 0.27, 2.9, h - 0.3, items or ["該当なし"], size=7.5, marker="", spacing=1.05)
@@ -1011,8 +1012,9 @@ def s_comments_overview(slide, ctx: Ctx, spec: dict):
     bullets(slide, th, x + 5.9, y + 0.27, 3.2, 1.1, tone_items or ["－"], size=7.5, marker="", spacing=1.1)
     # 定量接続
     inv: dict[str, list[str]] = {}
+    cats_here = set(ctx.summary["categories"])
     for cat, t in (ctx.cfg.action_library.get("category_theme_map") or {}).items():
-        if t:
+        if t and cat in cats_here:            # 他自治体向けの既定マップに含まれるカテゴリは無視
             inv.setdefault(t, []).append(cat)
     items = []
     for _, r in themes.head(4).iterrows():
@@ -1179,7 +1181,7 @@ def s_actions(slide, ctx: Ctx, spec: dict):
     for t, qs in themes:
         L = lib.get(t, {})
         lv = L.get("level", {})
-        rows.append({"cells": {"theme": t, "ev": "／".join(q[:28] for q in qs[:2]), "check": "・".join(L.get("check", [])),
+        rows.append({"cells": {"theme": t, "ev": "\n".join(qs[:2]), "check": "・".join(L.get("check", [])),
                                "act": "・".join(L.get("actions", [])),
                                "lv": f"全庁: {lv.get('全庁', '')}／部局: {lv.get('部局', '')}／課: {lv.get('課', '')}"}})
     p = ch.render_table(th, ctx.chart("actions"), cols, rows or [{"cells": {"theme": "該当なし"}}], row_h=min(0.95, (h - 0.5) / max(len(rows), 1)),
@@ -1373,7 +1375,7 @@ def s_dept_segments(slide, ctx: Ctx, spec: dict):
     add_text(slide, th, x + 5.6, y, 3.5, 0.25, "全庁・前年との比較", size=9, bold=True, color=th.hexv("brand_dark"))
     place_image(slide, th, p, x + 5.6, y + 0.27, 3.5, 2.0, align="left")
     sd = ctx.res["segment_drivers"].head(5)
-    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": wrap_cjk(r["text"], 24, 1)}] for _, r in sd.iterrows()]
+    items = [[{"text": f"{r['question_id']} ", "bold": True}, {"text": r["text"]}] for _, r in sd.iterrows()]
     add_text(slide, th, x + 5.6, y + 2.4, 3.5, 0.25, "タイプを分けるドライバー（全庁分析）", size=9, bold=True, color=th.hexv("brand_dark"))
     bullets(slide, th, x + 5.6, y + 2.67, 3.5, h - 2.7, items, size=7.2, marker="", spacing=1.05)
 
@@ -1390,7 +1392,7 @@ def s_dept_key_driver(slide, ctx: Ctx, spec: dict):
             + f"A（最優先改善）ゾーン {len(a)} 問。")
     _frame(slide, ctx, spec, f"{ctx.scope}｜Key Driver", lead, footnote=_kd_footnote(ctx, src))
     x, y, w, h = ctx.content()
-    labels = [f"{r['question_id']} {ctx.qtext(r['question_id'], 22)}" for _, r in top.iterrows()]
+    labels = [f"{r['question_id']} {ctx.qtext(r['question_id'])}" for _, r in top.iterrows()]
     p = ch.hbar_scores(th, ctx.chart("dept_kd"), labels, top["r"].tolist(), xlim=(0, 0.8), w=5.6, h=h - 0.25,
                        colors=[th.zone_color(z) for z in top["zone"]], font=6.8, label_chars=18, left=0.44)
     add_text(slide, th, x, y - 0.02, 5.6, 0.22, "影響度上位10の相関係数（色＝ゾーン）", size=8.5, bold=True, color=th.hexv("brand_dark"))
@@ -1399,7 +1401,7 @@ def s_dept_key_driver(slide, ctx: Ctx, spec: dict):
     for _, r in a.sort_values("impact", ascending=False).head(6).iterrows():
         q = r["question_id"]
         gap = ctx.val("設問", q, "diff_all")
-        items.append([{"text": f"{q} ", "bold": True}, {"text": f"{wrap_cjk(ctx.qtext(q), 22, 1)}", "size": 7.5},
+        items.append([{"text": f"{q} ", "bold": True}, {"text": f"{ctx.qtext(q)}", "size": 7.5},
                       {"text": f"　r={fmt(r['r'])} / {ctx.scope} {fmt(ctx.val('設問', q))}（全庁差 {fmt(gap, signed=True)}）", "size": 6.8, "color": th.hexv("ink_soft")}])
     add_text(slide, th, x + 5.9, y, 3.2, 0.25, "A 最優先改善（高影響 × 低スコア）", size=9, bold=True, color=th.hexv("negative"))
     bullets(slide, th, x + 5.9, y + 0.27, 3.2, h - 0.3, items or ["該当なし"], size=7.5, marker="", spacing=1.05)
@@ -1424,7 +1426,7 @@ def s_dept_actions(slide, ctx: Ctx, spec: dict):
     for t, qs in themes:
         L = lib.get(t, {})
         lv = L.get("level", {})
-        rows.append({"cells": {"theme": t, "ev": "／".join(q[:26] for q in qs[:2]), "check": "・".join(L.get("check", [])),
+        rows.append({"cells": {"theme": t, "ev": "\n".join(qs[:2]), "check": "・".join(L.get("check", [])),
                                "dept": f"部局: {lv.get('部局', '')}／課: {lv.get('課', '')}", "all": lv.get("全庁", "")}})
     p = ch.render_table(th, ctx.chart("dept_actions"), cols, rows or [{"cells": {"theme": "該当なし"}}], row_h=0.78, header_h=0.36, font=7)
     place_image(slide, th, p, x, y, w, 2.85, align="left")

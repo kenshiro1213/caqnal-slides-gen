@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+import unicodedata
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -39,6 +40,74 @@ def wrap_cjk(text: str, n: int, max_lines: int = 2) -> str:
         lines = lines[:max_lines]
         lines[-1] = lines[-1][: max(1, n - 1)] + "…"
     return "\n".join(lines)
+
+
+def _em(ch: str) -> float:
+    """1 文字の幅（em）。全角=1.0 / 半角≈0.56。"""
+    return 1.0 if unicodedata.east_asian_width(ch) in ("F", "W", "A") else 0.56
+
+
+_NO_LINE_START = set("、。，．,.)）」』】〕・：:；;!！?？ーぁぃぅぇぉっゃゅょァィゥェォッャュョ")
+
+
+def wrap_width(text: str, width_in: float, size: float, max_lines: int = 2) -> str:
+    """実幅（inch）とフォントサイズで折り返す。収まらない分だけ末尾を … にする。"""
+    limit = width_in * 72 / size  # em 単位の行幅
+    lines, cur, w = [], "", 0.0
+    for ch in str(text):
+        if ch == "\n":  # 明示改行
+            lines.append(cur)
+            cur, w = "", 0.0
+            continue
+        e = _em(ch)
+        if cur and w + e > limit and ch not in _NO_LINE_START:  # 禁則: 句読点・閉じ括弧は前行にぶら下げる
+            lines.append(cur)
+            cur, w = "", 0.0
+        cur += ch
+        w += e
+    if cur:
+        lines.append(cur)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        last = lines[-1]
+        while last and sum(_em(c) for c in last) + 1.0 > limit:
+            last = last[:-1]
+        lines[-1] = last + "…"
+    return "\n".join(lines)
+
+
+def _wrap_title(title: str, width_in: float, size: float) -> str:
+    """見出し: 収まらなければ空白で単語単位に 2 行化（Key / Driver）。空白が無ければ文字単位。"""
+    title = str(title)
+    if sum(_em(c) for c in title) * size / 72 <= width_in:
+        return title
+    if " " in title:
+        head, _, tail = title.rpartition(" ")
+        return f"{head}\n{tail}"
+    half = (len(title) + 1) // 2  # 「総合エンゲー／ジメント」のように均等に割る
+    return f"{title[:half]}\n{title[half:]}"
+
+
+def _fit_text(text: str, width_in: float, height_in: float, size: float, min_lines: int = 1) -> tuple[str, float]:
+    """セル（幅×高さ）に収まる折り返しと文字サイズを返す。まず行数を増やし、それでも溢れたら縮小（最大 -1.5pt）。"""
+    for s in (size, size - 0.5, size - 1.0, size - 1.5):
+        lines = max(min_lines, int(height_in * 72 / (s * 1.25)))
+        t = wrap_width(text, width_in, s, lines)
+        if not t.endswith("…"):
+            return t, s
+    return t, s
+
+
+def fit_labels(labels: list[str], width_in: float, pitch_in: float, size: float,
+               min_lines: int = 2) -> tuple[list[str], float]:
+    """軸ラベルを実幅で折り返す。1 ラベルあたりの高さ（pitch）に入る行数まで許し、溢れる時は全体を縮小（最大 -1.5pt）。"""
+    out = []
+    for s in (size, size - 0.5, size - 1.0, size - 1.5):
+        lines = max(min_lines, int(pitch_in * 72 / (s * 1.2)))
+        out = [wrap_width(l, width_in, s, lines) for l in labels]
+        if not any(t.endswith("…") for t in out):
+            return out, s
+    return out, s
 
 
 def fmt(v, nd: int = 2, signed: bool = False, na: str = "－") -> str:
@@ -104,10 +173,10 @@ def hbar_scores(theme: Theme, path: Path, labels: list[str], values: list[float]
         ax.text(ref, n - 0.35, f"{ref_label} {fmt(ref)}", ha="center", va="bottom", fontproperties=theme.fp(font - 1),
                 color=theme.c("ink_soft"))
     ax.set_yticks(ys)
-    ticklabels = [wrap_cjk(l, label_chars, 2) for l in labels]
+    ticklabels, lf = fit_labels(labels, w * left - 0.1, h * 0.88 / max(n, 1), font, 1 if n_labels else 2)
     if n_labels:
         ticklabels = [f"{t}\n(n={m})" if m else t for t, m in zip(ticklabels, n_labels)]
-    ax.set_yticklabels(ticklabels, fontproperties=theme.fp(font))
+    ax.set_yticklabels(ticklabels, fontproperties=theme.fp(lf))
     ax.set_xlim(xlim[0], xlim[1] + 0.35)
     ax.set_ylim(-0.6, n - 0.4 + (0.5 if ref is not None else 0))
     ax.set_xticks(np.arange(xlim[0], xlim[1] + 0.01, 1))
@@ -147,7 +216,8 @@ def dist_stacked(theme: Theme, path: Path, labels: list[str], dists: list[list[f
                         color="white" if k in (0, len(dists[i]) - 1) else theme.c("ink"))
             left += share
     ax.set_yticks(ys)
-    ax.set_yticklabels([wrap_cjk(l, label_chars, 2) for l in labels], fontproperties=theme.fp(font))
+    tl, lf = fit_labels(labels, w * 0.34 - 0.1, h * 0.74 / max(n, 1), font)
+    ax.set_yticklabels(tl, fontproperties=theme.fp(lf))
     ax.set_xlim(0, 100)
     ax.set_xticks([0, 25, 50, 75, 100])
     ax.set_xticklabels(["0", "25", "50", "75", "100%"], fontproperties=theme.fp(font - 1))
@@ -193,13 +263,15 @@ def heatmap(theme: Theme, path: Path, row_labels: list[str], col_labels: list[st
                         color="white" if abs(v) > vlim * 0.75 else theme.c("ink"))
     ax.set_xticks(range(ncols))
     cl = ([first_col_title] if has_first else []) + list(col_labels)
-    ax.set_xticklabels([wrap_cjk(c, col_chars, 3) for c in cl], fontproperties=theme.fp(font - 0.5))
+    xl, xf = fit_labels(cl, (0.97 - left) * w / ncols - 0.04, top_pad * h * 0.8, font - 0.5)
+    ax.set_xticklabels(xl, fontproperties=theme.fp(xf))
     ax.xaxis.tick_top()
     ax.set_yticks(range(R))
-    ylabels = [wrap_cjk(r, row_chars, 2) for r in row_labels]
+    ylabels, yf = fit_labels(row_labels, left * w - 0.1 - (0.45 if n_col is not None else 0),
+                             (0.97 - top_pad - 0.03) * h / max(R, 1), font)
     if n_col is not None:
         ylabels = [f"{l}  n={n}" for l, n in zip(ylabels, n_col)]
-    ax.set_yticklabels(ylabels, fontproperties=theme.fp(font))
+    ax.set_yticklabels(ylabels, fontproperties=theme.fp(yf))
     ax.tick_params(length=0, pad=2)
     for sp in ax.spines.values():
         sp.set_visible(False)
@@ -304,10 +376,10 @@ def stacked100(theme: Theme, path: Path, labels: list[str], shares: list[list[fl
                 ax.text(left + v / 2, ys[i], f"{v:.0f}", ha="center", va="center", fontproperties=theme.fp(font - 1), color="white")
             left += v
     ax.set_yticks(ys)
-    tl = [wrap_cjk(l, label_chars, 2) for l in labels]
+    tl, lf = fit_labels(labels, w * 0.26 - 0.1, h * (0.96 - bottom) / max(n, 1), font)
     if n_labels:
         tl = [f"{t} (n={m})" for t, m in zip(tl, n_labels)]
-    ax.set_yticklabels(tl, fontproperties=theme.fp(font))
+    ax.set_yticklabels(tl, fontproperties=theme.fp(lf))
     ax.set_xlim(0, 100)
     ax.set_xticks([0, 25, 50, 75, 100])
     ax.set_xticklabels(["0", "25", "50", "75", "100%"], fontproperties=theme.fp(font - 1))
@@ -334,7 +406,8 @@ def bar_counts(theme: Theme, path: Path, labels: list[str], counts: list[float],
             txt = f"{v:.0f}" + (f" ({100 * v / tot:.0f}%)" if pct else "")
             ax.text(v + max(vals) * 0.02, y, txt, va="center", fontproperties=theme.fp(font - 0.5), color=theme.c("ink"))
         ax.set_yticks(ys)
-        ax.set_yticklabels([wrap_cjk(l, label_chars, 2) for l in labels], fontproperties=theme.fp(font))
+        tl, lf = fit_labels(labels, w * 0.44 - 0.1, h * 0.86 / max(len(labels), 1), font)
+        ax.set_yticklabels(tl, fontproperties=theme.fp(lf))
         ax.set_xlim(0, max(vals) * (1.7 if pct else 1.35) if max(vals) else 1)
         ax.set_xticks([])
     else:
@@ -370,7 +443,7 @@ def render_table(theme: Theme, path: Path, columns: list[dict], rows: list[dict]
     ax.add_patch(Rectangle((0, 0), W, header_h, color=theme.c("brand_pale")))
     x = 0.0
     for c in columns:
-        ax.text(x + c["width"] / 2, header_h / 2, wrap_cjk(c["title"], c.get("chars", 10), 2), ha="center", va="center",
+        ax.text(x + c["width"] / 2, header_h / 2, _wrap_title(c["title"], c["width"] - 0.08, font), ha="center", va="center",
                 fontproperties=theme.fp(font, True), color=theme.c("ink"))
         x += c["width"]
     y = header_h
@@ -416,9 +489,10 @@ def render_table(theme: Theme, path: Path, columns: list[dict], rows: list[dict]
                     txt = fmt_pct(v) if kind == "pct" else fmt(v, signed=c.get("signed", False))
                 else:
                     txt = "" if v is None else str(v)
+                size = font
                 if kind == "text":
-                    txt = wrap_cjk(txt, c.get("chars", 20), c.get("lines", 1))
-                ax.text(tx, y + row_h / 2, txt, ha=align, va="center", fontproperties=theme.fp(font, bold),
+                    txt, size = _fit_text(txt, c["width"] - 0.12, row_h - 0.03, font, c.get("lines", 1))
+                ax.text(tx, y + row_h / 2, txt, ha=align, va="center", fontproperties=theme.fp(size, bold), linespacing=1.15,
                         color=c.get("color", theme.c("ink")))
             x += c["width"]
         ax.plot([0, W], [y + row_h, y + row_h], color=theme.c("line"), linewidth=0.5)
