@@ -220,5 +220,6 @@ decks: [全庁, 部局別, 1pager]
 - 実装完了: リネーム・gitignore・docs / `caqnal profile|init|validate|analyze|render|all|verify` / 全庁47枚・部局別7枚×17・One Pager・分析手法解説（社内向け 22枚）・詳細集計 Excel / pytest 11件 / `verify` バイト一致
 - 目次ページはテンプレ2枚目と同じレイアウト（マスター1 `TITLE_2`: 左に「目次」、右に章タイトル）を使用
 - 八戸市で確認済みの出力: `local-governments/八戸市/output/`（git 管理外）
-- 他自治体（佐賀市・十和田市・板橋区）: `profile/` と `questions.yaml` 下書きまで。回答データ受領後に client.yaml を作成して analyze
+- 佐賀市: `client.yaml`（尺度=正順、総合=Q59-61、上司マネジメント満足度=Q62、属性・所属・自由記述なし）と自治体専用 `decks/全庁.yaml` まで作成。合成データで validate→analyze→render→PDF の疎通を確認済み（2026-09-13）。回答 CSV は未受領で、受領後に `init --responses` で column/header を埋めて実行する
+- 十和田市・板橋区: `profile/` と `questions.yaml` 下書きまで。回答データ受領後に client.yaml を作成して analyze
 - 今後の候補: LLM による示唆文生成（insights.json を入力）、課レベル対応（課長向け 2P シート）、Meiryo フォントでの PDF 検証（Windows）

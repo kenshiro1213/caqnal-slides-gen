@@ -147,5 +147,7 @@ def priority_orgs(cfg: ClientConfig, scores: pd.DataFrame, drivers: pd.DataFrame
         good = unit in top and (np.isnan(r["diff_yoy"]) or r["diff_yoy"] >= po["good_practice"]["improved_at_least"])
         rec.update(p, total=total, band=band, good_practice=bool(good), support_share=support)
         rows.append(rec)
-    out = pd.DataFrame(rows)
+    cols = ["unit", "n", "suppressed", "mean", "diff_all", "diff_yoy", "yoy_status", *pts, "total", "band",
+            "good_practice", "support_share"]
+    out = pd.DataFrame(rows, columns=cols)   # 組織設問が無い自治体では 0 行（列だけ揃える）
     return out.sort_values(["total", "mean"], ascending=[False, True], kind="stable").reset_index(drop=True)

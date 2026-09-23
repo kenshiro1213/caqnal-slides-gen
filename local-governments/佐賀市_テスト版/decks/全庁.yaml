@@ -1,0 +1,52 @@
+# =============================================================================
+# 佐賀市テスト版 全庁デッキ: 標準構成から初回調査で空になる経年スライド（trend_ranking / quadrant_yoy / org_heatmap diff_yoy）を除いたもの
+# type は render/slides.py の REGISTRY。title / lead を書けば既定文を上書きできる。
+# 章構成: 結果 → 差異 → 類型 → 要因 → 現場差 → 自由記述 → 総括 → 施策
+# =============================================================================
+name: 全庁分析レポート
+filename: "{client}_{fy}_全庁分析レポート.pptx"
+slides:
+  - type: cover
+  - type: toc
+  - {type: section, no: 0, title: Executive Summary}
+  - type: exec_onepage                                   # T01
+  - {type: section, no: 1, title: 調査概要・結果の読み方}
+  - type: survey_overview
+  - type: respondent_attributes
+  - type: reading_guide
+  - {type: section, no: 2, title: 全庁結果}
+  - type: overall_kpi                                    # T02
+  - {type: category_result, unit_type: 軸, title: "働きがい・働きやすさ（軸別）"}      # T03
+  - {type: category_result, unit_type: カテゴリ}                                    # T03
+  - {type: question_ranking, kind: 高評価}               # T04
+  - {type: question_ranking, kind: 低評価}               # T04
+  - type: dispersion                                     # 平均×SD
+  - {type: section, no: 3, title: 職員タイプ分析}
+  - type: segment_overview                               # T08
+  - type: segment_by_org                                 # T08
+  - type: segment_drivers                                # T08
+  - {type: section, no: 4, title: Key Driver 分析}
+  - type: kd_correlation                                 # T09
+  - type: kd_regression                                  # T09
+  - type: kd_impact_score                                # T09
+  - {type: section, no: 5, title: 部局分析}
+  - type: org_overview_table                             # T06
+  - {type: org_heatmap, value: diff_all}                 # T06 全庁差
+  - type: org_positioning                                # T07
+  - type: priority_orgs
+  - {type: section, no: 6, title: 属性分析}
+  - {type: attribute_heatmap, attributes: [年代, 役職]}  # T10
+  - {type: attribute_heatmap, attributes: [勤続年数, 性別]}
+  - {type: attribute_heatmap, attributes: [入庁前経験]}
+  - {type: section, no: 7, title: 自由記述分析}
+  - type: comments_overview                              # T11
+  - type: comments_by_org                                # T11
+  - {type: section, no: 8, title: 分析の総括}
+  - type: synthesis                                      # T14
+  - type: priority_issues                                # 重点課題候補（6観点シグナル）
+  - {type: section, no: 9, title: 施策の方向性}
+  - type: actions                                        # T15
+  - {type: section, title: APPENDIX, layout: appendix}
+  - {type: question_list, part: 1}
+  - {type: question_list, part: 2}
+  - type: method_notes

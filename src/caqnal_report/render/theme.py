@@ -23,13 +23,17 @@ class Theme:
         fp = self.t["font"]
         preset = fp["presets"][fp["preset"]]
         fallback = fp["presets"]["noto"]
-        self.family: str = preset["family"]
-        self.regular_file = PROJECT_ROOT / (preset.get("regular") or fallback["regular"])
-        self.bold_file = PROJECT_ROOT / (preset.get("bold") or fallback["bold"])
-        self.mpl_family = preset["family"] if preset.get("regular") else fallback["family"]
-        for f in (self.regular_file, self.bold_file):
-            if f.exists():
-                font_manager.fontManager.addfont(str(f))
+        self.family: str = preset["family"]            # PPTX のテキストに書くフォント名
+        reg = PROJECT_ROOT / preset["regular"] if preset.get("regular") else None
+        bold = PROJECT_ROOT / preset["bold"] if preset.get("bold") else None
+        if reg is None or not reg.exists():            # 図表用ファイルが無ければ Noto にフォールバック
+            reg, bold = PROJECT_ROOT / fallback["regular"], PROJECT_ROOT / fallback["bold"]
+        if bold is None or not bold.exists():
+            bold = reg
+        self.regular_file, self.bold_file = reg, bold
+        for f in {self.regular_file, self.bold_file}:
+            font_manager.fontManager.addfont(str(f))
+        self.mpl_family = FontProperties(fname=str(self.regular_file)).get_name()
         matplotlib.rcParams["font.family"] = self.mpl_family
         matplotlib.rcParams["axes.unicode_minus"] = False
         matplotlib.rcParams["svg.hashsalt"] = "caqnal"

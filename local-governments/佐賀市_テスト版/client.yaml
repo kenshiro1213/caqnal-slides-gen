@@ -1,0 +1,91 @@
+# =============================================================================
+# 佐賀市 テスト版（架空データ）。打合せでレポートの完成形を示すための設定。
+# 実データ用の設定は ../佐賀市/client.yaml。属性・所属・自由記述設問（Q63〜Q69）は架空に追加したもの。
+# =============================================================================
+client:
+  name: 佐賀市
+  honorific: 佐賀市 御中
+  fiscal_year: R8
+  fiscal_year_label: 令和8年度
+  survey_title: 職員エンゲージメント調査
+  report_title: 職員エンゲージメント調査 分析レポート【テスト版・架空データ】
+  report_date: 2026年9月（テスト版）
+  survey_period: 2026年8月（想定）
+  target_count: 1360
+
+data:
+  responses: data/R8_回答.csv
+  encoding: utf-8-sig
+  respondent_id: {source: column, name: "Q1. ＩＤ入力設問"}
+  previous: []
+
+questions: questions.yaml
+label_normalize: strip_circled_prefix
+
+scales:
+  agree5:
+    labels: {非常にそう思う: 5, そう思う: 4, どちらともいえない: 3, あまりそう思わない: 2, 全くそう思わない: 1}
+    positive: [5, 4]
+    neutral: [3]
+    negative: [2, 1]
+    excluded: []
+    min: 1
+    max: 5
+
+attributes:
+  性別:       {question: Q63, order: [男性, 女性, 答えない]}
+  役職:       {question: Q64, order: [一般職, 管理職（課長級以上）], short: {管理職（課長級以上）: 管理職}}
+  年代:       {question: Q65, order: [10・20代, 30代, 40代, 50代, 60代以上]}
+  勤続年数:   {question: Q66, order: [3年未満, 3年以上10年未満, 10年以上20年未満, 20年以上]}
+  入庁前経験: {question: Q67, order: [民間経験あり, 他自治体等経験あり, 民間・他自治体両方, なし]}
+
+organization:
+  levels: [部局]
+  question: Q68
+  units: [総務部, 企画調整部, 市民生活部, 保健福祉部, こども未来部, 経済部, 農林水産部, 建設部, 環境部,
+          上下水道局, 教育委員会事務局, 消防局, 会計課, 議会事務局]
+
+indicators:
+  overall_engagement:
+    name: 総合エンゲージメント
+    questions: [Q59, Q60, Q61]
+  manager_satisfaction:
+    name: 上司マネジメント満足度
+    questions: [Q62]
+  働きがい:   {name: 働きがい, from_axis: 働きがい}
+  働きやすさ: {name: 働きやすさ, from_axis: 働きやすさ}
+
+segmentation:
+  x: overall_engagement
+  y: 働きやすさ
+  x_label: エンゲージメント
+  y_label: 働きやすさ（環境・支援）
+  labels: {high_high: 活躍実感型, high_low: 意欲先行型, low_high: 環境充足型, low_low: 要支援型}
+
+positioning: {x: 働きがい, y: 働きやすさ}
+
+key_driver:
+  target: overall_engagement
+  exclude: []
+
+comments:
+  question: Q69
+
+decks: [全庁, 部局別, 1pager, 手法解説]
+deck_overrides:                        # 初回調査のため経年スライドを除いた構成
+  全庁: decks/全庁.yaml
+  部局別: decks/部局別.yaml
+
+action_library:                        # 佐賀市のカテゴリ（大）→ 施策ライブラリのテーマ
+  category_theme_map:
+    経営戦略・理念: 組織連携
+    経営基盤: 職場環境
+    事業・社会的意義: 組織風土
+    働き方: 業務量・人員配置
+    評価・処遇: 評価・処遇
+    組織風土: 組織風土
+    キャリア形成: キャリア・成長
+    コンプライアンス遵守: 組織風土
+    その他: null
+
+analysis: {}

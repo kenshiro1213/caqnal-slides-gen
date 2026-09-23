@@ -152,6 +152,18 @@ def add_text(slide, theme: Theme, x, y, w, h, text, size=None, bold=False, color
     return tb
 
 
+def _strip_style(shape) -> None:
+    """図形からテーマ参照（<p:style>）を外す。
+
+    python-pptx の add_shape / add_connector はテーマの effectRef を持つ <p:style> を付けるため、
+    shadow.inherit=False（空の effectLst）にしても LibreOffice 等ではテーマ既定の影が描かれる。
+    塗り・線は明示的に設定しているので <p:style> ごと削除して影を完全に無くす。"""
+    style = shape._element.find(qn("p:style"))  # noqa: SLF001
+    if style is not None:
+        shape._element.remove(style)  # noqa: SLF001
+    shape.shadow.inherit = False
+
+
 def add_rect(slide, theme: Theme, x, y, w, h, fill: str, line: str | None = None, shape=MSO_SHAPE.RECTANGLE):
     shp = slide.shapes.add_shape(shape, Inches(x), Inches(y), Inches(w), Inches(h))
     shp.fill.solid()
@@ -161,7 +173,7 @@ def add_rect(slide, theme: Theme, x, y, w, h, fill: str, line: str | None = None
         shp.line.width = Pt(0.75)
     else:
         shp.line.fill.background()
-    shp.shadow.inherit = False
+    _strip_style(shp)
     if shp.has_text_frame:
         shp.text_frame.text = ""
     return shp
@@ -171,6 +183,7 @@ def add_line(slide, theme: Theme, x1, y1, x2, y2, color: str, width_pt: float = 
     ln = slide.shapes.add_connector(1, Inches(x1), Inches(y1), Inches(x2), Inches(y2))
     ln.line.color.rgb = RGBColor.from_string(color.lstrip("#"))
     ln.line.width = Pt(width_pt)
+    _strip_style(ln)
     return ln
 
 

@@ -26,6 +26,7 @@ uv run caqnal analyze  --client 八戸市        # → local-governments/八戸�
 uv run caqnal render   --client 八戸市 --pdf  # → output/*.pptx, 部局別/*.pptx, 分析手法解説_社内向け.pptx, *.xlsx, *.pdf
 uv run caqnal all      --client 八戸市 --pdf  # 上記を一括
 uv run caqnal verify   --client 八戸市        # 2回実行してバイト一致を確認
+uv run caqnal render   --client 八戸市 --font meiryo --pdf   # Meiryo UI 版を output/font_meiryo/ に出力
 uv run pytest                                 # 合成データでの回帰テスト
 ```
 新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
@@ -49,7 +50,7 @@ uv run pytest                                 # 合成データでの回帰テ�
 - 尺度は自治体ごとに `client.yaml: scales` で定義（八戸市は ①=5 の逆順、佐賀市は 5=5 の正順）
 - 経年比較は設問番号ではなく設問文で対応付け（`yoy_map.yaml`、比較可／参考比較／比較不可）
 - PPTX は zip タイムスタンプを固定してバイト一致。PNG は matplotlib メタデータを除去
-- フォントは Noto Sans JP 既定。`config/theme.yaml: font.preset: meiryo` で Meiryo UI に切替
+- フォントは Noto Sans JP 既定。`config/theme.yaml: font.preset: meiryo` または `render --font meiryo` で Meiryo UI に切替。Mac では Office 同梱の `meiryo.ttc` を図表に使い、PDF 変換（LibreOffice）に見せるには `~/Library/Fonts` にシンボリックリンクを置く
 
 ## 生データの扱い
 `local-governments/*/data/`、`*/output/`、`*_PII*` は `.gitignore` で除外。自治体名・列名・設問文・値分布（`profile/`）のみを追跡する。

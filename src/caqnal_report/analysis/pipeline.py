@@ -133,7 +133,10 @@ def load_intermediate(inter_dir: Path) -> AnalysisResult:
     res = AnalysisResult()
     for name in CSV_TABLES:
         p = inter_dir / f"{name}.csv"
-        res.tables[name] = pd.read_csv(p, encoding="utf-8-sig") if p.exists() and p.stat().st_size > 3 else pd.DataFrame()
+        try:
+            res.tables[name] = pd.read_csv(p, encoding="utf-8-sig") if p.exists() else pd.DataFrame()
+        except pd.errors.EmptyDataError:     # 列も行も無い表（自由記述設問なし等）は空 DataFrame
+            res.tables[name] = pd.DataFrame()
     for name in ("scores", "segments", "comment_themes", "priority_orgs"):
         df = res.tables[name]
         if "suppressed" in df.columns:

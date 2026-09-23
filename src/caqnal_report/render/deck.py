@@ -67,7 +67,10 @@ def _fname(cfg: ClientConfig, pattern: str, scope: str = "全庁") -> str:
     return pattern.format(client=cfg.client["name"], fy=cfg.fiscal_year, scope=scope)
 
 
-def render_all(cfg: ClientConfig, res: AnalysisResult, out_dir: Path, decks: list[str], pdf: bool = False) -> list[Path]:
+def render_all(cfg: ClientConfig, res: AnalysisResult, out_dir: Path, decks: list[str], pdf: bool = False,
+               font_preset: str | None = None) -> list[Path]:
+    if font_preset:
+        cfg.theme["font"]["preset"] = font_preset
     theme = Theme(cfg)
     written: list[Path] = []
     min_n = cfg.analysis["anonymity"]["min_n"]

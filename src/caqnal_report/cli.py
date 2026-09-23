@@ -87,12 +87,15 @@ def _analyze(cfg: C.ClientConfig, out_dir: Path) -> None:
     write_intermediate(results, out_dir, cfg)
 
 
-def _render(cfg: C.ClientConfig, inter_dir: Path, out_dir: Path, decks: list[str], pdf: bool) -> list[Path]:
+def _render(cfg: C.ClientConfig, inter_dir: Path, out_dir: Path, decks: list[str], pdf: bool,
+            font: str | None = None) -> list[Path]:
     from .analysis.pipeline import load_intermediate
     from .render.deck import render_all
 
     results = load_intermediate(inter_dir)
-    return render_all(cfg, results, out_dir, decks, pdf=pdf)
+    if font:
+        out_dir = out_dir / f"font_{font}"   # フォント別出力は既定出力と混ぜない
+    return render_all(cfg, results, out_dir, decks, pdf=pdf, font_preset=font)
 
 
 def cmd_analyze(args) -> None:
@@ -104,7 +107,7 @@ def cmd_analyze(args) -> None:
 def cmd_render(args) -> None:
     cfg = _client(args)
     decks = cfg.decks + ["excel"] if args.deck == "all" else [args.deck]
-    for p in _render(cfg, cfg.out_dir / "intermediate", cfg.out_dir, decks, args.pdf):
+    for p in _render(cfg, cfg.out_dir / "intermediate", cfg.out_dir, decks, args.pdf, args.font):
         print(f"wrote {p}")
 
 
@@ -183,8 +186,9 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("render", help="中間データ → PPTX/Excel/PDF")
     add_client(p)
-    p.add_argument("--deck", default="all", help="全庁 | 部局別 | 1pager | excel | all")
+    p.add_argument("--deck", default="all", help="全庁 | 部局別 | 1pager | 手法解説 | excel | all")
     p.add_argument("--pdf", action="store_true")
+    p.add_argument("--font", default=None, help="theme.yaml の font.presets キー（noto | meiryo）。指定時は output/font_<preset>/ に出力")
     p.set_defaults(func=cmd_render)
 
     p = sub.add_parser("all", help="validate → analyze → render")

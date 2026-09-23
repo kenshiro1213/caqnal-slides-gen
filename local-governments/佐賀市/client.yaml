@@ -1,0 +1,102 @@
+# =============================================================================
+# 佐賀市 令和8年度 エンゲージメント調査 設定（仕様書 Appendix A に対応）
+# 閾値は config/analysis_defaults.yaml を継承。案件固有の値のみ analysis: で上書きする。
+#
+# 【状態: 回答データ未受領（2026-09-13 時点）】
+#   受領済み: data/R8_設問_260805.xlsx（設問マスタ 62 問）、data/R8_対象者リスト_PII.csv（読まない）
+#   未受領  : data/R8_回答.csv（回答データ）
+#   回答 CSV 受領後に行うこと:
+#     1. uv run caqnal profile --client 佐賀市
+#     2. uv run caqnal init --client 佐賀市 --questions data/R8_設問_260805.xlsx --responses data/R8_回答.csv
+#        （questions.yaml の column / header が埋まる。Q34 / Q55 の note は再確認）
+#     3. 下記 data.encoding / respondent_id / target_count / survey_period を実データに合わせる
+#     4. 属性・所属列が回答 CSV に含まれていれば attributes / organization を設定し、
+#        deck_overrides を外して標準デッキ（全庁・部局別・1pager・手法解説）に戻す
+# =============================================================================
+client:
+  name: 佐賀市
+  honorific: 佐賀市 御中
+  fiscal_year: R8
+  fiscal_year_label: 令和8年度
+  survey_title: 職員エンゲージメント調査
+  report_title: 職員エンゲージメント調査 分析レポート
+  report_date: 2026年9月                 # 要確認
+  survey_period: null                  # 回答 CSV 受領後に設定
+  target_count: 1360                   # 対象者リストの実データ行数（Excel 由来の空行を除く）。要確認
+
+data:
+  responses: data/R8_回答.csv            # 未受領
+  encoding: utf-8-sig                  # 実ファイルに合わせて変更（cp932 の可能性あり）
+  respondent_id: {source: column, name: "Q1. ＩＤ入力設問"}   # 通し番号 1 が ID 入力設問。列名は実 CSV に合わせる
+  previous: []                         # 初回調査のため経年比較なし
+
+questions: questions.yaml
+label_normalize: strip_circled_prefix
+
+scales:
+  agree5:                              # 佐賀市は正順（5 が最良）。八戸市（①=5）と逆なので注意
+    labels: {非常にそう思う: 5, そう思う: 4, どちらともいえない: 3, あまりそう思わない: 2, 全くそう思わない: 1,
+             "5": 5, "4": 4, "3": 3, "2": 2, "1": 1}      # 回答 CSV が数値で来る場合にも対応
+    positive: [5, 4]
+    neutral: [3]
+    negative: [2, 1]
+    excluded: []
+    min: 1
+    max: 5
+
+# 設問マスタに属性設問・所属設問が無い（ID 入力で対象者リストと紐付ける設計と推測）。
+# 対象者リスト（PII）は日本語列が文字化けしており、パイプラインでも読まないため、
+# 属性別・部局別は回答 CSV に属性・所属列が付与されるまで未設定。
+attributes: {}
+organization:
+  levels: [部局]
+  question: null
+  units: []
+
+indicators:
+  overall_engagement:
+    name: 総合エンゲージメント
+    questions: [Q59, Q60, Q61]         # 満足（Q59）・推奨（Q60）・継続意向（Q61）
+  manager_satisfaction:
+    name: 上司マネジメント満足度
+    questions: [Q62]
+  働きがい:   {name: 働きがい, from_axis: 働きがい}
+  働きやすさ: {name: 働きやすさ, from_axis: 働きやすさ}
+
+segmentation:                          # 4類型（仕様書4-5）
+  x: overall_engagement
+  y: 働きやすさ
+  x_label: エンゲージメント
+  y_label: 働きやすさ（環境・支援）
+  labels: {high_high: 活躍実感型, high_low: 意欲先行型, low_high: 環境充足型, low_low: 要支援型}
+
+positioning:                           # 組織ポジショニング（仕様書4-6）。organization 設定後に有効
+  x: 働きがい
+  y: 働きやすさ
+
+key_driver:
+  target: overall_engagement
+  exclude: []                          # 管理職限定などの条件付き設問なし
+
+comments:
+  question: null                       # 設問マスタに自由記述設問なし
+
+# 属性・所属が無い間は 属性分析／部局分析／自由記述 の章を除いた構成にする。
+# 回答 CSV に属性・所属が付いたら deck_overrides を削除し decks を標準に戻す。
+decks: [全庁, 1pager, 手法解説]
+deck_overrides:
+  全庁: decks/全庁.yaml
+
+action_library:                        # 佐賀市のカテゴリ（大）→ 施策ライブラリのテーマ
+  category_theme_map:
+    経営戦略・理念: 組織連携
+    経営基盤: 職場環境
+    事業・社会的意義: 組織風土
+    働き方: 業務量・人員配置
+    評価・処遇: 評価・処遇
+    組織風土: 組織風土
+    キャリア形成: キャリア・成長
+    コンプライアンス遵守: 組織風土
+    その他: null
+
+analysis: {}

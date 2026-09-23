@@ -29,9 +29,9 @@ font:
       regular: assets/fonts/NotoSansJP-Regular.ttf
       bold: assets/fonts/NotoSansJP-Bold.ttf
     meiryo:
-      family: Meiryo UI               # Windows 同梱。Mac では PDF 変換時に代替される
-      regular: null                   # matplotlib 用ファイルが無い場合は Noto にフォールバック
-      bold: null
+      family: Meiryo UI               # Windows 同梱。Mac では Office 同梱の meiryo.ttc を参照（無ければ図表は Noto にフォールバック）
+      regular: /Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts/meiryo.ttc
+      bold: /Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts/meiryob.ttc
   size:
     title: 14
     lead: 10
