@@ -8,6 +8,10 @@
   caqnal render   --client 八戸市 [--deck 全庁|部局別|1pager|excel|all] [--pdf]
   caqnal all      --client 八戸市 [--pdf]
   caqnal verify   --client 八戸市
+
+  v2 工程（output/runs/<run_id>/ に記録）
+  caqnal run       --client 八戸市 [--new | --run RUN_ID]
+  caqnal normalize --client 八戸市 [--run RUN_ID]
 """
 from __future__ import annotations
 
@@ -160,6 +164,32 @@ def cmd_verify(args) -> None:
     print(f"再現性 OK: {len(a)} ファイルが 2 回の実行で一致")
 
 
+# ---------------------------------------------------------------- v2 工程（run 単位）
+def cmd_run(args) -> None:
+    from .steps import open_or_create
+
+    cfg = _client(args)
+    run = open_or_create(cfg, args.run, new=args.new) if (args.new or args.run) else None
+    if run is None:
+        from .run import Run
+
+        run = Run.latest(cfg)
+        if run is None:
+            print("run がありません（caqnal run --new または caqnal normalize で作成）")
+            return
+    print(run.summary())
+
+
+def cmd_normalize(args) -> None:
+    from .steps import open_or_create, step_normalize
+
+    run = open_or_create(_client(args), args.run, new=args.new)
+    ok = step_normalize(run)
+    print(run.summary())
+    if not ok:
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------- main
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="caqnal", description="CAQNAL 自治体エンゲージメント調査 レポート生成")
@@ -205,12 +235,25 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--pdf", action="store_true")
     p.set_defaults(func=cmd_all)
 
+    for name, fn, hlp in [("run", cmd_run, "v2: run の状態を表示（--new で新しい run を作る）"),
+                          ("normalize", cmd_normalize, "v2: 原資料 → 標準データ（run/private/normalized/）")]:
+        p = sub.add_parser(name, help=hlp)
+        add_client(p)
+        p.add_argument("--run", default=None, help="run_id（省略時は最新。設定・原資料が変わっていれば新しい run）")
+        p.add_argument("--new", action="store_true", help="新しい run を作る")
+        p.set_defaults(func=fn)
+
     args = ap.parse_args(argv)
+    from .run import RunError
+
     try:
         args.func(args)
     except C.ConfigError as e:
         print(f"設定エラー: {e}", file=sys.stderr)
         sys.exit(2)
+    except RunError as e:
+        print(f"run エラー: {e}", file=sys.stderr)
+        sys.exit(3)
 
 
 if __name__ == "__main__":

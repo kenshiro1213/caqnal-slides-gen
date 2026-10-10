@@ -110,7 +110,7 @@ def _check_required(cfg: ClientConfig, rep: CaseReport) -> None:
         for k in keys:
             if body.get(k) is None:
                 rep.unresolved.append(f"{section}.{k}")
-    for section in ("population", "publication", "corrections", "attribute_rules"):
+    for section in ("population", "publication", "corrections", "attribute_rules", "normalize"):
         for p in _nulls(cfg.raw.get(section) or {}, section):
             if p not in rep.unresolved:
                 rep.unresolved.append(p)

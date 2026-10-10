@@ -42,6 +42,21 @@ attribute_rules:                       # 属性の算出（§5）
   tenure_bins: null
   future_date_rule: null
 
+normalize:                             # 入力変換（元の列 → 標準データ）。対象者リストは指定した列だけ読む
+  id_rule: {zfill: null}               # ID のゼロ埋め桁数（不要なら削除）
+  duplicates: null                     # 回答の重複 ID: keep_last | keep_first（無ければ削除）
+  unit_match: name                     # 回答の所属設問を組織辞書の name / id で照合
+  roster:                              # 対象者リスト（無い案件は roster ごと削除）
+    input: roster
+    encoding: null
+    id_column: null
+    unit_column: null
+    unit_match: id
+    status_column: null                # 対象外の区分列
+    exclude_values: []
+    duplicates: null
+    attributes: {}                     # {属性名: {column: 列名, kind: category | age | tenure}}
+
 org_dictionary: org.yaml               # 組織辞書。書式は下記
 # --- org.yaml ---
 # levels: [部局, 課]                    # 上位から順

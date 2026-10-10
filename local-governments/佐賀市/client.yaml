@@ -145,6 +145,11 @@ attribute_rules:                       # 属性の算出（§5）。属性は対
   tenure_bins: null
   future_date_rule: null
 
+normalize:                             # 入力変換。ID 入力設問（Q1）で対象者リストと紐付ける
+  id_rule: {zfill: null}
+  duplicates: null
+  roster: null                         # 文字化けしていない対象者リストの受領後に列（ID・所属・属性・対象外区分）を設定
+
 # org_dictionary: org.yaml             # org.yaml（unit_id・親ID・名称・階層・表示順）は対象者リスト受領後に作成
 
 readers:                               # 成果物の読者と閲覧範囲（§1, §14）
