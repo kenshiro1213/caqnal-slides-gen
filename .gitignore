@@ -13,3 +13,6 @@ local-governments/*/output/
 ~$*.pptx
 tests/fixtures/*/data/
 tests/fixtures/*/output/
+
+# 自治体の成果物サンプル（実際の集計値・職員の声の要約を含む）は追跡しない。構成は docs/参考デッキ構成_佐賀市v2.md
+spec/**/*.pptx

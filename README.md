@@ -31,6 +31,8 @@ uv run pytest                                 # 合成データでの回帰テ�
 ```
 新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
 
+> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。
+
 ## ディレクトリ
 | パス | 内容 |
 |---|---|
@@ -38,8 +40,8 @@ uv run pytest                                 # 合成データでの回帰テ�
 | `config/` | `analysis_defaults.yaml`（仕様書 §9 閾値）/ `theme.yaml`（色・フォント・座標）/ `action_library.yaml` / `comment_themes.yaml` / `decks/`（スライド構成） |
 | `local-governments/<自治体>/` | `client.yaml` `questions.yaml` `yoy_map.yaml` `profile/` `RENAME_MEMO.md`（git 管理）、`data/` `output/`（git 管理外） |
 | `slides-master/` | カクナルスライド.pptx（テンプレート） |
-| `spec/` | 分析レポート制作 仕様書（docx） |
-| `docs/` | 仕様書要約・スライドマスター仕様・データ形式メモ・参考実装メモ・計画・オンボーディング手順（原本を開かずに参照するための md） |
+| `spec/` | `自治体向け/`: 現行の引継ぎ手順書 v2.0（docx）と佐賀市のサンプル PPTX（全庁・所属長・人事）。直下の docx は旧仕様 v1 |
+| `docs/` | 仕様書要約（v2 現行・v1 旧）・参考デッキ構成・スライドマスター仕様・データ形式メモ・参考実装メモ・計画・オンボーディング手順（原本を開かずに参照するための md） |
 | `tests/` | 合成データ（八戸市スキーマ、seed 固定）による回帰テスト |
 
 ## 設計の要点

@@ -1,6 +1,139 @@
-# CAQNAL スライド量産パイプライン 実装計画
+# CAQNAL スライド量産パイプライン 実装計画（v2: 自治体共通版対応）
 
 ## Context
+`spec/自治体向け/` に新しい手順書 **CAQNAL_レポート作成引継ぎ手順書_自治体共通版.docx（v2.0, 2026-10-08）** と、佐賀市の完成サンプル PPTX 6 点（全庁本編 68 頁・全庁詳細付録 上下冊・総務部長/人事課長向け・人事担当向け）が届いた。現行実装は旧仕様（T01〜T15、4類型、Impact×Score ゾーン、ルールベース示唆、matplotlib 画像）に沿っている。新仕様では次の点が変わった。
+- 工程が 8 段になる（validate→normalize→aggregate→models→publish→compose→render→verify）。run の状態と入力の指紋を持つ
+- 成果物が読者別になる（全庁／部局長／課長／人事担当＋詳細付録）。所属長版は「同じ部局内の付録」と「記入シート 1 枚」
+- 匿名性は二次秘匿まで行い、読者別の公開データを作って render はそれだけを読む
+- 重回帰は未学習データで検証し、決定木を加え、モデルごとに採否の状態（採用/参考/保留/推定不能）を持つ
+- グラフ・表は PowerPoint 上で**編集可能**にする（ネイティブのグラフ・表）。紺 #173650／ゴールド #CAA44A
+- 自治体固有の処理（Q番号固定・人数・施策文）は共通コードに入れない。佐賀市は検証事例として扱う
+
+ユーザーの決定: **段階的に全面対応**する。同梱と書かれた「実装仕様書・プロンプト10本・設定点検ツール・設定例」は**手元に無い**ため、手順書本文とサンプル PPTX から仕様を起こす。
+
+## 方針
+- 既存の 3 ステージ（ingest/analysis/render）を 8 工程へ組み替える。既存モジュールは活かせる範囲で再利用する（scoring・aggregate・drivers・pptx_helpers・theme・charts・deck の REGISTRY 方式）
+- 工程間はファイルだけで受け渡す。`output/runs/<run_id>/{private,public/<reader>,render,qa}/`＋`run.json`（状態、各工程の入力・設定・コードの指紋、警告、未確定事項）
+- 状態: `draft_unconfirmed → validated → computed → public_view_ready → draft_qa_pending → release_ready`。unknown／failed／blocked を passed として扱わない
+- 旧仕様だけにある要素（4類型・Impact×Score ゾーン・重点部局スコア・ランキング）は既定デッキから外す。ランキングは設定で有効にしたときだけ出す。コードは当面残し、最終フェーズで整理する
+
+## フェーズ
+
+### P0. 仕様の md 化と既存 docs の更新（コード変更なし）
+- `docs/仕様書要約_自治体共通版v2.md` を新規作成する。章ごとの要点、状態表、成果物×読者表、モデル採否表、佐賀市事例の値を載せる
+- `docs/参考デッキ構成_佐賀市v2.md` を新規作成する。サンプル 6 デッキの章・頁構成を記録し、slide type の設計元にする
+- `docs/PLAN.md` を本計画で更新する。`docs/仕様書要約_分析レポート制作.md` は「旧仕様（v1）」と明記する。`docs/自治体オンボーディング手順.md` と `README.md` を新工程に合わせる
+- メモリ: `caqnal-project-decisions` に v2 移行（ルールベース示唆→人が確認する compose、画像→ネイティブ図表）を追記する
+
+### P1. 案件設定と validate
+- `client.yaml` のスキーマを拡張する（未確定は `null`）
+  - `population`: 対象・対象外の規則、母数の基準、重複の採用規則
+  - `org_dictionary`: unit_id／parent_id／名称／階層／表示順。別ファイル `org.yaml`
+  - `attributes`: 可変長の dimension 一覧。基準日、年代・勤続の境界
+  - `indicators`: 目的指標・カテゴリ指標・共通9問。`status: implemented|undefined|not_conducted|partial`
+  - `scales`: 中立なし（4件法）と逆転に対応。逆転は 1 回だけ適用
+  - `anonymity`: 最低 n を案件で必須にする（既定値を自動適用しない）
+  - `readers`: 全庁／部局長(unit_ids)／課長(unit_ids)／人事。許可する組織・属性・自由記述・モデル参照
+  - `models`: CV の分割単位（部局/課）、木の最大深さ・葉の最低人数、再抽出の回数
+- `ingest/validate.py` を拡張する
+  - null の数を数え、残っていれば `draft_unconfirmed` にする
+  - 組織辞書: 親の存在・循環・孤立
+  - 設問 ID の一意性、尺度の参照先、指標の構成設問の存在
+  - 自治体名による分岐や固定 Q 番号が無いかの静的点検
+- 対象: `config.py`（`ClientConfig` に org 辞書・readers・models のアクセサを追加）、`ingest/validate.py`、`cli.py`
+
+### P2. normalize と run 管理
+- 新規 `src/caqnal_report/run.py`: run_id の採番、`run.json` 読み書き、SHA256 指紋、前工程の成功と指紋一致の確認、依存出力の無効化
+- 新規 `ingest/normalize.py`: 元 CSV/xlsx を標準テーブルへ変換して `private/` に CSV で書く
+  - `respondents`（対象/対象外理由）、`responses` long、`questions`、`org`、`attributes`、`comments`
+  - ID は文字列で照合する（ゼロ埋め・空白を正規化）。照合・除外の記録を残す
+  - 既存の `ingest/loaders.py` の丸数字除去・匿名 ID 採番を流用する
+- 対象者リストとの紐付け（佐賀市の ID 入力設問→名簿）は入力変換の設定で行う。名簿を読むときも PII 列は private 外へ出さない
+
+### P3. aggregate
+- 回答状況: 対象・対象外・有効・未照合・重複・欠損を段階別に。回答率は所属別・属性別で、元データと独立に照合する
+- 記述統計: 全庁・部局・課・許可属性 × 設問・カテゴリ・目的指標。n・平均・点数・肯定/中立/否定。丸めは表示時だけ。`analysis/aggregate.py`・`scoring.py` を拡張する（課の階層、可変の属性）
+- 相関: カテゴリ×目的指標、設問×目的指標。組合せごとの n とブートストラップ区間を出す
+
+### P4. models
+- `analysis/drivers.py` を `analysis/models/` に再構成する
+  - `ols.py`: rank・残差自由度・VIF・区間（クラスタ単位を明記）。一意に推定できなければ `推定不能`
+  - `validation.py`: グループ分割（部局/課）の交差検証。前処理・標準化は学習側だけで行う。検証 R²・MAE を平均だけの基準と比べる
+  - `tree.py`: scikit-learn の決定木。深さと葉の最低人数を設定から取る。木の葉にも公開条件をかける。再抽出で根元項目の安定性を見る
+  - `status.py`: 採否（採用/参考/保留/推定不能）と理由
+- 依存に `scikit-learn` を追加する（`pyproject.toml`）
+
+### P5. publish（読者別公開データ）
+- 新規 `analysis/publish.py`
+  - 一次秘匿（n<最低人数）
+  - 二次秘匿: 親子の組織、属性の合計、重複する表から差し引きで推測できるセルを追加で隠す
+  - 読者の範囲で切り出す。所属長は組織辞書から同じ部局内だけ。親が不明なら全庁へ広げずに停止する
+  - 非表示の理由を記録する。非表示の値は公開ファイルに残さない（0 と非表示を区別する）
+- 自由記述: 記述者数・実質意見数・テーマ（記述 ID＋原文の指紋）。公開は人が確認した要約だけ。人事限定の属性別分析は人事の公開データにだけ入れる
+
+### P6. compose と render（読者別デッキ）
+- compose: 新規 `local-governments/<自治体>/interpretation.yaml`（コンサルタントが書く）。中身は観測事実（根拠への参照と n）→背景仮説→大方針→重点施策（対象・内容・担当・権限）→試行と確認（時期・工数の仮定・指標・拡大/中止の条件）、方針資料の出典（名称・改定日・頁）。ルールベースでは「観測事実の下書き」だけを生成し、施策文は生成しない
+- render は public データと interpretation だけを読む。編集可能にするため python-pptx のネイティブのグラフ・表へ移行する（`render/charts.py` の画像描画を `render/native_charts.py` に置き換える）。グラフの埋込 Excel に非表示セルを残さない
+- theme: 紺 #173650・ゴールド #CAA44A を `config/theme.yaml` に追加し、見出しは紺に揃える
+- デッキ設定 `config/decks/`（読者ごと。頁数は設問数・組織数・属性数から自動で分割）
+  - `全庁.yaml`: 表紙・目次・見方・回答状況（属性数に応じて頁を分割）・サマリー2枚・4指標・カテゴリ・設問の強み/課題・部局比較（分割）・属性別・KD（カテゴリ/設問×目的指標）・点数×関連・重回帰・決定木・職員の声・大方針・施策・実行と指標・資料（確認事項・用語集）
+  - `全庁_詳細付録.yaml`: 許可された所属 × カテゴリ・全設問詳細を繰り返す
+  - `部局長.yaml` / `課長.yaml`: 自所属サマリー2枚・4指標・カテゴリ・全庁分析の使い方・職員の声・重点施策・**記入シート1枚**（課題/行動/担当/期限/確認指標/支援依頼）・役割分担・90日計画・同じ部局内の付録（所属ごとにカテゴリ・4指標＋設問詳細）
+  - `人事.yaml`: 基本方針・重点設問・属性差・KD/モデル・人事施策・工数・実行体制・付録 A1〜A7（部局別・全設問・相関・属性・モデル詳細・人事限定の自由記述）
+  - 指標が未実施/未定義なら、その頁は注意書きを付けて省略する。採用しないモデルは「解釈が難しい理由と代わりの読み方」の頁にする
+- 既存の `1pager`・`部局別`・`手法解説` は、`手法解説` を v2 のモデル診断に合わせて残し、他は廃止または全庁デッキへ統合する
+
+### P7. verify と受入
+- 新規 `qa/`
+  - 数値照合: private 集計 ⇄ public ⇄ PPT に入っている値（表セル・グラフのキャッシュ・埋込 Excel）
+  - 漏えい検査: ノート・代替テキスト・非表示頁・埋込データに、非表示の値や他自治体の名称・ID が無いか
+  - 表示検査: LibreOffice で PNG 化して全頁の画像を出し、文字切れ・重なりを検査
+  - 再実行時のバイト一致（既存の `cmd_verify` を流用）
+  - QA 記録（確認者・日付・最終指紋）が揃えば `release_ready`
+- 受入（手順書 §18）: 設問・尺度・階層・属性が違う 2 案件以上で、共通コードを変えずに通ること
+  - 八戸市（実データ・部局のみ・逆転あり・経年あり）
+  - 佐賀市テスト版（合成・課の階層あり）
+  - 新たに架空の「テスト町」（4件法・共通9問あり・小規模所属・組織改編）を `tests/fixtures/` に作る
+
+## 主に変更・追加するファイル
+- 変更: `src/caqnal_report/{cli.py,config.py}`、`ingest/validate.py`、`analysis/{aggregate,scoring,drivers,comments}.py`、`render/{deck,slides,pptx_helpers,theme,excel}.py`、`config/{analysis_defaults,theme}.yaml`、`config/decks/*`、`local-governments/佐賀市/client.yaml`、`pyproject.toml`、docs 一式
+- 新規: `run.py`、`ingest/normalize.py`、`analysis/models/*`、`analysis/publish.py`、`render/native_charts.py`、`qa/*`、`local-governments/<自治体>/{org.yaml,interpretation.yaml}`、`tests/fixtures/テスト町/`
+- CLI: `caqnal validate|normalize|aggregate|models|publish|compose|render|verify|all --client X [--run RUN_ID] [--reader 全庁|部局長:<unit>|課長:<unit>|人事]`
+
+## 検証
+- 各フェーズの終わりに `uv run pytest` を通す。追加するテスト:
+  - 二次秘匿で差し引き推測できないこと
+  - 範囲外の所属が出ないこと
+  - rank 落ちで推定不能になること
+  - CV で学習側だけ標準化していること
+  - 4件法で中立が無いこと
+- `uv run caqnal all --client 八戸市 --pdf`、`--client 佐賀市_テスト版` で全読者のデッキを生成し、`caqnal verify` で QA が通ること、2 回実行でバイト一致すること
+- 生成した PPTX を PNG 化して数枚を目視する。グラフが PowerPoint で編集できることは手動確認として記録する（構造検証とは区別する）
+- 佐賀市の実回答はまだ受領していないため、サンプル PPTX との値の一致は受領後に確認する
+
+## 進め方
+P0 → P1 → P2 の順にコミットを分けて進める。各フェーズの完了時に報告し、P6 のデッキ構成は P0 の構成 md を見てもらってから着手する。
+
+## 進捗
+| フェーズ | 状態 |
+|---|---|
+| P0 仕様の md 化・docs 更新 | 完了（2026-10-10） |
+| P1 案件設定と validate | 未着手 |
+| P2 normalize と run 管理 | 未着手 |
+| P3 aggregate | 未着手 |
+| P4 models | 未着手 |
+| P5 publish | 未着手 |
+| P6 compose と render | 未着手（デッキ構成は `docs/参考デッキ構成_佐賀市v2.md` を確認してから） |
+| P7 verify と受入 | 未着手 |
+
+参照: `docs/仕様書要約_自治体共通版v2.md`（現行仕様）、`docs/参考デッキ構成_佐賀市v2.md`（サンプルの頁構成）
+
+
+---
+
+## 付録: v1 計画（旧仕様、2026-09 実装済み）
+
+### Context
 - 目的: 自治体エンゲージメント調査（CAQNAL）の分析レポート（PPTX/PDF/Excel）を、自治体ごとの設定ファイル差し替えだけで量産できる Python パイプラインを作る
 - 参考: `/Users/kenshiro.takimoto/Dev/me/worker-survey-example`（Python 3.12 / uv / pandas / matplotlib / python-pptx、3ステージ疎結合）
 - 仕様: `CAQNAL_エンゲージメント調査_分析レポート制作.docx`（ページテンプレート T01〜T15、閾値§9、設定項目 Appendix A）
@@ -15,7 +148,7 @@
   - リネームは統一規則で行い、各自治体フォルダ直下に `RENAME_MEMO.md` を残す
   - 各入力ファイルの要約をトークン節約形式の md で保存し、以後は原本を開かずに参照できるようにする。プランニング資料も md で残す
 
-## 調査で判明した重要事実（設計に直結）
+### 調査で判明した重要事実（設計に直結）
 | 事実 | 設計への反映 |
 |---|---|
 | 八戸市CSV: UTF-8 BOM、984行×61列、回答者ID列なし、PII列なし | `encoding: utf-8-sig`、行番号から匿名ID `R8-0001` を採番 |
@@ -32,7 +165,7 @@
 | 環境: Python 3.12.8、uv、pandas/openpyxl/python-pptx/matplotlib/PyYAML あり、`soffice` は `/opt/homebrew/bin/soffice` | 追加依存: scipy, statsmodels（Welch t / 重回帰 / VIF）, xlsxwriter |
 | 佐賀市 対象者リスト CSV は文字化け済みだが メール・職員番号・生年月日が生きた PII | `data/` に `_PII` サフィックスで隔離、パイプラインでは読まない |
 
-## 最終ディレクトリ構成
+### 最終ディレクトリ構成
 ```
 caqnal-slides-gen/
 ├── .gitignore  .python-version  pyproject.toml  uv.lock  README.md
@@ -100,7 +233,7 @@ caqnal-slides-gen/
     └── test_render_smoke.py         合成データで全デッキ生成、枚数・確定性を確認
 ```
 
-## リネーム計画（実施時に各フォルダへ RENAME_MEMO.md を書く）
+### リネーム計画（実施時に各フォルダへ RENAME_MEMO.md を書く）
 命名規則: `data/<年度>_<種別>[_<版・日付>][_PII].<ext>`　年度=R7/R8…、種別 ∈ {回答, 設問, 対象者リスト, 組織マスタ}
 
 | 元 | 先 |
@@ -118,7 +251,7 @@ caqnal-slides-gen/
 
 全て未追跡ファイルなので `mv` で移動（git 履歴なし）。`.gitignore` に `local-governments/*/data/`、`local-governments/*/output/`、`**/*_PII*` を入れてからコミット。
 
-## 設定スキーマ（八戸市の値で作成し、他自治体はこれをコピーして埋める）
+### 設定スキーマ（八戸市の値で作成し、他自治体はこれをコピーして埋める）
 `client.yaml`
 ```yaml
 client: {name: 八戸市, fiscal_year: R8, fiscal_year_label: 令和8年度, report_date: 2026-09, target_count: null}  # target_count 不明 → 回答率は「－」
@@ -166,7 +299,7 @@ decks: [全庁, 部局別, 1pager]
 
 `config/theme.yaml`: `font: {preset: noto}` と `presets: {noto: {family: Noto Sans JP, files: [...]}, meiryo: {family: Meiryo UI, files: []}}`、色（上記テーマ色をロール名で）、スライド寸法 `10 x 5.625 in`、`content_box: {top: 0.85, left: 0.45, right: 0.45, bottom: 0.55}`、レイアウト名マップ。
 
-## パイプライン（3ステージ、ファイル結合）
+### パイプライン（3ステージ、ファイル結合）
 1. `profile`  → `profile/<ファイル名>.md`（ヘッダー一覧・行列数・欠損・値分布 top20・自由記述は件数のみ）。新自治体受領時に最初に実行する。
 2. `init`     → xlsx から `questions.yaml` 下書き、前年度があれば `yoy_map.yaml` 下書き。人が `reverse`/`role`/`condition` を確認して確定。
 3. `validate` → 仕様書1-3（列対応1:1、尺度定義、組織紐付け、匿名性設定、経年対応の分類）。NG は具体的メッセージで停止。
@@ -174,7 +307,7 @@ decks: [全庁, 部局別, 1pager]
 5. `render`   → `output/八戸市_R8_全庁分析レポート.pptx`、`output/部局別/八戸市_R8_<部局>.pptx`（n<5 の部局は生成せず一覧に「非表示」）、`output/八戸市_R8_ExecutiveOnePager.pptx`、`output/八戸市_R8_詳細集計.xlsx`、`--pdf` で PDF
 6. `verify`   → analyze+render を2回実行し SHA-256 比較（参考実装の `normalize_pptx` を移植）
 
-## デッキ構成（`config/decks/全庁.yaml`、約45枚）
+### デッキ構成（`config/decks/全庁.yaml`、約45枚）
 表紙 / 目次 / 0中表紙 / **T01** Executive One Page / 1中表紙 / 調査概要 / 回答者属性 / 結果の読み方（指標定義・非表示ルール） / 2中表紙 / **T02** 総合エンゲージメントKPI（3設問カード＋分布＋前年差） / **T03** カテゴリー結果（横棒＋前年差） / 軸別（働きがい×働きやすさ） / **T04** 高評価TOP10 / 低評価BOTTOM10 / **T05** 改善・悪化TOP10 / 当年×前年差4象限 / 平均×SD ばらつき / 3中表紙 / **T08** 4類型全庁構成比＋前年 / 部局別4類型100%積み上げ / 類型別ドライバー差 / 4中表紙 / **T09** 相関ランキング / 標準化β / Impact×Score（A〜Dゾーン） / 5中表紙 / **T06** 部局別総合一覧（当年・前年差・全庁差・n） / 部局×カテゴリ 全庁差ヒートマップ / 前年差ヒートマップ / **T07** 部局ポジショニング / 重点部局・好事例候補（§9-1加点表） / 6中表紙 / **T10** 属性×カテゴリ（年代・役職・勤続・性別・入庁前経験、2属性/枚） / 7中表紙 / **T11** 自由記述概況（件数・テーマ構成） / テーマ×部局 / 8中表紙 / **T14** 総括（強み・課題・主要因、ルールベース文） / 重点課題候補（§4-9 6観点シグナル表） / 9中表紙 / **T15** 施策方向性（課題テーマ→現場確認→施策候補、`action_library.yaml`） / APPENDIX中表紙 / 設問一覧 / 分析手法・注記
 
 `部局別.yaml`（6P、仕様書6-2）: **T12** 部局サマリー / カテゴリ・設問（強みTOP3・課題TOP3） / 経年変化 / 4類型構成（課別ポジショニングは課データなしのため省略注記） / 部局Key Driver（n≥30、未満は全庁KDを参照表示） / アクション仮説（§10-2 テーマ表＋§6-3-1 WS用の問い）
@@ -182,7 +315,7 @@ decks: [全庁, 部局別, 1pager]
 
 各 builder は `(slide, ctx, spec, page_no)` シグネチャで REGISTRY 登録。`spec.scope` で全庁/部局を切替（参考実装の `org` パラメータ方式）。
 
-## 参考実装から移植する関数（`/Users/kenshiro.takimoto/Dev/me/worker-survey-example/src/survey_report/`）
+### 参考実装から移植する関数（`/Users/kenshiro.takimoto/Dev/me/worker-survey-example/src/survey_report/`）
 - `render/pptx_build.py: normalize_pptx()` → `render/deck.py`（そのまま）
 - `render/pptx_helpers.py: set_run_font()`（`<a:ea>` 注入）, `add_table()/style_cell()` → `render/pptx_helpers.py`
 - `render/charts.py: render_table()`, `wrap_cjk()`, `_save()`（metadata Software=None） → `render/charts.py`
@@ -190,7 +323,7 @@ decks: [全庁, 部局別, 1pager]
 - `cli.py: cmd_verify` の2回実行ハッシュ比較 → `cli.py`
 - 直す点: ディレクトリのハードコード → `--client` でクライアントルートを解決／outcome ID・属性キー・年度の直書き → config 導出／`slide_layouts[6]` 新規作成 → テンプレート pptx 展開
 
-## 前提（config にコメントとして明記。CAQNAL 確認事項）
+### 前提（config にコメントとして明記。CAQNAL 確認事項）
 - 総合エンゲージメント = Q58, Q59, Q60（仕様書3-2 標準の3指標は八戸市設問に無いため）
 - 逆転項目 = Q43, Q52。Q56 は管理職回答のみ採用、Key Driver から除外
 - 4類型・ポジショニングのしきい値 = 全庁平均。4類型軸 = 総合エンゲージメント × 働きやすさ軸
@@ -198,7 +331,7 @@ decks: [全庁, 部局別, 1pager]
 - 自由記述テーマ分類はキーワード辞書（`config/comment_themes.yaml`、§4-8-2 のテーマ一覧）による規則分類。LLM 分類は将来ステージ
 - カテゴリ名は xlsx 準拠（`現在の成長について`）。CSV の `【成長実感について】` は header に verbatim 保持のみ
 
-## 実装順序
+### 実装順序
 1. リネーム・`.gitignore`・`pyproject.toml`（uv、deps: pandas numpy scipy statsmodels matplotlib python-pptx openpyxl xlsxwriter pyyaml、dev: pytest）・フォントベンダリング・`docs/*.md`・`RENAME_MEMO.md`・`local-governments/README.md`
 2. `config.py` + `ingest/`（loaders, profile, question_master, yoy, validate）→ 八戸市の `client.yaml`/`questions.yaml`/`questions_R7.yaml`/`yoy_map.yaml`/`profile/` を生成し手で確定
 3. `analysis/`（scoring → aggregate → ranking → significance → segmentation → drivers → comments → judgement → insights → pipeline）＋ tests（合成データ）
@@ -207,7 +340,7 @@ decks: [全庁, 部局別, 1pager]
 6. 他3自治体: `init` で `questions.yaml` 下書き＋`profile/`＋`RENAME_MEMO.md`（データ未着なので analyze は不可）
 7. `docs/自治体オンボーディング手順.md`、README、コミット（データ除外を `git status` で確認）
 
-## 検証
+### 検証
 - `uv run pytest`（合成データでスコア・抑制（n<5 → 全指標 NaN, 表示「－」）・経年マッチ・KD・レンダ smoke）
 - `uv run caqnal validate --client 八戸市` が通る。R7 Q34 が「参考比較/要確認」で列挙される
 - `uv run caqnal all --client 八戸市 --pdf` → 全庁 pptx/pdf、部局別 17本（監査委員事務局は非表示扱い）、1pager、詳細集計 xlsx が生成される
@@ -216,7 +349,7 @@ decks: [全庁, 部局別, 1pager]
 - `uv run caqnal verify --client 八戸市` でバイト一致
 - `git status` で `data/`・`output/`・`_PII` が追跡されていないことを確認
 
-## 実装状況（2026-09-11）
+### 実装状況（2026-09-11）
 - 実装完了: リネーム・gitignore・docs / `caqnal profile|init|validate|analyze|render|all|verify` / 全庁47枚・部局別7枚×17・One Pager・分析手法解説（社内向け 22枚）・詳細集計 Excel / pytest 11件 / `verify` バイト一致
 - 目次ページはテンプレ2枚目と同じレイアウト（マスター1 `TITLE_2`: 左に「目次」、右に章タイトル）を使用
 - 八戸市で確認済みの出力: `local-governments/八戸市/output/`（git 管理外）
