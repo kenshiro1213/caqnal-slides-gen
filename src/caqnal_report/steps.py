@@ -75,7 +75,36 @@ def step_aggregate(run: Run) -> bool:
     return True
 
 
-STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate}
+def step_models(run: Run) -> bool:
+    import pandas as pd
+
+    from .analysis.models import fit_models, write_models
+    from .ingest.normalize import read_normalized
+
+    run.require("models")
+    norm = read_normalized(run.step_dir("normalize"))
+    rs = pd.read_csv(run.step_dir("aggregate") / "respondent_scores.csv", dtype={"respondent_id": str})
+    try:
+        res = fit_models(run.cfg, rs, norm["respondents"], norm["org"])
+    except ValueError as e:
+        print(f"[models] blocked: {e}")
+        run.record("models", "blocked", extra={"errors": [str(e)]})
+        return False
+    paths = write_models(res, run.step_dir("models"))
+    run.record("models", "passed", outputs=paths, warnings=res.warnings, unresolved=res.unresolved,
+               status="computed")
+    fit = res.tables["model_fit"]
+    print(f"[models] passed → {run.step_dir('models')}")
+    for _, r in fit.iterrows():
+        cv = "" if pd.isna(r["cv_r2"]) else f" 検証R² {r['cv_r2']:.3f} / MAE {r['cv_mae']:.1f}（平均のみ {r['base_mae']:.1f}）"
+        print(f"  {r['objective_id']:<14} {r['model']:<9} {r['candidate']}{cv}  {r['reasons'] or ''}")
+    for w in res.warnings + [f"未確定 {u}" for u in res.unresolved]:
+        print(f"  {w}")
+    return True
+
+
+STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate,
+              "models": step_models}
 
 
 def run_until(run: Run, last: str) -> bool:

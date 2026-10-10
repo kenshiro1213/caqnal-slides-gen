@@ -59,3 +59,7 @@ segmentation:
 
 quadrant:                  # 当年スコア × 前年差 4象限（§5-2）
   labels: {high_up: 維持, low_up: 改善途上, high_down: 要注視, low_down: 最優先}
+
+models_v2:                 # 仕様 v2 §9, §10 の採否候補の目安（最終判断は担当者。client.yaml models.decisions で記録）
+  vif_reference: 10        # VIF 最大がこれを超える重回帰は「参考」（個々の係数が不安定）
+  stability_reference: 0.8 # 決定木の根元の項目が再抽出でこの割合未満しか選ばれなければ「参考」

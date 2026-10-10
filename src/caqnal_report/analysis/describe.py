@@ -165,13 +165,19 @@ def aggregate(cfg: ClientConfig, norm: dict[str, pd.DataFrame]) -> Aggregated:
     for q in cfg.qs(LIKERT_ROLES):
         units.append(("設問", q["id"], q.get("text") or q["id"], [q["id"]]))
 
+    # 条件付き設問の「条件外」は回答すべき設問に数えない（全構成設問に回答 = 該当する設問に全て回答）
+    resp = norm["responses"]
+    na_ok = (resp.assign(x=resp["missing_reason"] == "条件外")
+             .pivot(index="respondent_id", columns="question_id", values="x")
+             .reindex(index=wide.index, columns=wide.columns).fillna(False).astype(bool))
     rs = pd.DataFrame(index=wide.index)
     for ut, uid, _, members in units:
         cols = [m for m in members if m in wide.columns]
         if not cols:
             continue
         sub = wide[cols]
-        ok = sub.notna().all(axis=1) if rule == "all_answered" else sub.notna().any(axis=1)
+        ok = (sub.notna() | na_ok[cols]).all(axis=1) & sub.notna().any(axis=1) if rule == "all_answered" \
+            else sub.notna().any(axis=1)
         rs[f"{ut}:{uid}"] = sub.mean(axis=1).where(ok)
     rs.index.name = "respondent_id"
     out.tables["respondent_scores"] = rs.reset_index()

@@ -89,3 +89,18 @@ action_library:                        # 佐賀市のカテゴリ（大）→ �
     その他: null
 
 analysis: {}
+
+# ---- 仕様 v2 の案件設定（架空データでの動作確認用）
+aggregate: {category_missing: all_answered}
+common9: {status: not_conducted}
+objectives:
+  - {id: satisfaction, name: 働くことへの満足, short: 満足, question: Q59}
+  - {id: recommend, name: 推奨意向, short: 推奨, question: Q60}
+  - {id: retention, name: 継続勤務意向, short: 継続, question: Q61}
+  - {id: supervisor, name: 上司への満足, short: 上司満足, question: Q62}
+publication: {min_n: 5, secondary_suppression: true, comments_min_respondents: 5}
+models:
+  cv: {group_level: 部局, folds: 5}
+  ols: {interval: HC3}
+  tree: {max_depth: 2, min_leaf: 100}
+  bootstrap: {n: 100, seed: 0}
