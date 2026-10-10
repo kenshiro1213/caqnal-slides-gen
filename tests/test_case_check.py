@@ -23,6 +23,7 @@ CONFIRMED = {
     "population": {"target_basis": "名簿", "exclusion_rule": "休職者を除く", "duplicate_rule": "最終回答"},
     "publication": {"min_n": 5},
     "common9": {"status": "not_conducted"},
+    "aggregate": {"category_missing": "all_answered"},
     "objectives": [],
     "org_dictionary": "org.yaml",
     "readers": [{"id": "全庁", "kind": "all_staff"}, {"id": "総務部長", "kind": "dept_head", "unit": "100"},
