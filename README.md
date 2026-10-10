@@ -31,7 +31,7 @@ uv run pytest                                 # 合成データでの回帰テ�
 ```
 新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
 
-> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）。
+> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）、`caqnal report --client X`（読者別 PPTX → `output/runs/<run_id>/render/`。途中の aggregate / models / publish / compose も個別に実行できる）。
 
 ## ディレクトリ
 | パス | 内容 |

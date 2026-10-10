@@ -1,0 +1,32 @@
+# 人事担当向け（全庁本編の分析を深め、モデル詳細と所属別支援を付ける。人事限定の自由記述は compose 後に追加）
+name: 人事担当向け
+filename: "{client}_{fy}_人事担当向けレポート.pptx"
+slides:
+  - type: cover
+  - type: toc
+  - type: reading_guide
+  - type: response_overview
+  - type: response_by_attribute
+  - type: indicator_guide
+  - {type: summary_results, chapter_no: 1}
+  - {type: summary_state, chapter_no: 1}
+  - {type: indicator_distribution, chapter_no: 2}
+  - {type: category_scores, chapter_no: 2}
+  - {type: question_strengths, chapter_no: 2}
+  - {type: attribute_indicators, chapter_no: 2}
+  - {type: kd_category, chapter_no: 3}
+  - {type: kd_category_matrix, chapter_no: 3}
+  - {type: kd_question, chapter_no: 3, objective: all}
+  - {type: model_guide, chapter_no: 3}
+  - {type: ols, chapter_no: 3, model: category, objective: all}
+  - {type: ols, chapter_no: 3, model: question, objective: all}
+  - {type: model_fit_table, chapter_no: 3}
+  - {type: tree, chapter_no: 3, objective: all}
+  - {type: comments, chapter_no: 4}
+  - {type: policy, chapter_no: 5}
+  - {type: measures, chapter_no: 5}
+  - {type: kpi_plan, chapter_no: 6}
+  - type: audit_notes
+  - type: glossary
+  - {type: org_indicator_table, title: A1. 部局別主要指標, chapter_title: 詳細付録}
+  - {type: org_category_table, title: A1. 部局別カテゴリ, chapter_title: 詳細付録}

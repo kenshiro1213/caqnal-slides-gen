@@ -139,8 +139,37 @@ def step_publish(run: Run) -> bool:
     return True
 
 
+def step_compose(run: Run) -> bool:
+    from .analysis.compose import compose, write_compose
+
+    run.require("compose")
+    unresolved = [u for s in ("validate", "normalize", "aggregate", "models") for u in (run.step(s) or {}).get("unresolved", [])]
+    res = compose(run.cfg, run.step_dir("publish"), unresolved)
+    paths = write_compose(res, run.step_dir("compose"))
+    missing = [] if (run.cfg.root / "interpretation.yaml").exists() else \
+        ["interpretation.yaml が無いため、示唆・方針・施策の頁は未記入の枠になる"]
+    run.record("compose", "passed", outputs=paths, unresolved=missing)
+    print(f"[compose] passed → {run.step_dir('compose')}" + (f"  ※ {missing[0]}" if missing else ""))
+    return True
+
+
+def step_render(run: Run) -> bool:
+    from .render.v2.deck import render_reader
+
+    run.require("render")
+    paths = []
+    for reader in run.cfg.readers or [{"id": "全庁", "kind": "all_staff"}]:
+        paths += render_reader(run.cfg, run.step_dir("publish"), run.step_dir("compose"), reader,
+                               run.step_dir("render"))
+    run.record("render", "passed", outputs=paths, status="draft_qa_pending")
+    print(f"[render] passed → {run.step_dir('render')}")
+    for p in paths:
+        print(f"  {p.name}")
+    return True
+
+
 STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate,
-              "models": step_models, "publish": step_publish}
+              "models": step_models, "publish": step_publish, "compose": step_compose, "render": step_render}
 
 
 def run_until(run: Run, last: str) -> bool:

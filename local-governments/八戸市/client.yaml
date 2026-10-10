@@ -96,3 +96,19 @@ comments:
 decks: [全庁, 部局別, 1pager, 手法解説]   # 手法解説 = インナー向け 分析手法の解説資料
 
 analysis: {}                          # 標準閾値からの上書きなし
+
+# ---- 仕様 v2 の案件設定（2026-10-10 追加。値は v1 の納品物と同じ前提で置いた暫定値。CAQNAL 確認後に unresolved から外す）
+publication: {min_n: 5, secondary_suppression: true}     # v1 の anonymity.min_n と同じ
+aggregate: {category_missing: all_answered}
+common9: {status: not_conducted}
+objectives:                            # outcome 設問を個別の目的指標として扱う
+  - {id: satisfaction, name: 働くことへの満足, short: 満足, question: Q58}
+  - {id: recommend, name: 推奨意向, short: 推奨, question: Q59}
+  - {id: retention, name: 継続勤務意向, short: 継続, question: Q60}
+models:
+  cv: {group_level: 部局, folds: 5}
+  ols: {interval: HC3}
+  tree: {max_depth: 2, min_leaf: 50}
+  bootstrap: {n: 200, seed: 0}
+unresolved:
+  - publication / objectives / models は暫定値（v1 と同じ前提）。CAQNAL の確認待ち

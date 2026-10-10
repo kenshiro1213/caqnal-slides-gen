@@ -15,6 +15,8 @@
   caqnal aggregate --client 八戸市 [--run RUN_ID]   （未実行の前工程も順に実行）
   caqnal models    --client 八戸市 [--run RUN_ID]
   caqnal publish   --client 八戸市 [--run RUN_ID]
+  caqnal compose   --client 八戸市 [--run RUN_ID]
+  caqnal report    --client 八戸市 [--run RUN_ID]   （読者別 PPTX まで）
 """
 from __future__ import annotations
 
@@ -187,7 +189,7 @@ def _cmd_step(args) -> None:
     from .steps import open_or_create, run_until
 
     run = open_or_create(_client(args), args.run, new=args.new)
-    ok = run_until(run, args.cmd)
+    ok = run_until(run, "render" if args.cmd == "report" else args.cmd)
     print(run.summary())
     if not ok:
         sys.exit(1)
@@ -242,7 +244,9 @@ def main(argv: list[str] | None = None) -> None:
                           ("normalize", _cmd_step, "v2: 原資料 → 標準データ（run/private/normalized/）"),
                           ("aggregate", _cmd_step, "v2: 標準データ → private 集計（run/private/aggregate/）"),
                           ("models", _cmd_step, "v2: 重回帰・決定木・検証・採否候補（run/private/models/）"),
-                          ("publish", _cmd_step, "v2: 秘匿と読者別の公開データ（run/public/<読者>/）")]:
+                          ("publish", _cmd_step, "v2: 秘匿と読者別の公開データ（run/public/<読者>/）"),
+                          ("compose", _cmd_step, "v2: 公開データ＋interpretation.yaml → 読者別の文章"),
+                          ("report", _cmd_step, "v2: 読者別 PPTX まで作る（run/render/）")]:
         p = sub.add_parser(name, help=hlp)
         add_client(p)
         p.add_argument("--run", default=None, help="run_id（省略時は最新。設定・原資料が変わっていれば新しい run）")

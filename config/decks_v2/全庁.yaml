@@ -1,0 +1,35 @@
+# =============================================================================
+# 全庁向け 本編（仕様 v2 §14、docs/参考デッキ構成_佐賀市v2.md「全庁本編」）
+# type は src/caqnal_report/render/v2/slides.py の REGISTRY。頁数は組織数・属性数・目的指標数で変わる
+# =============================================================================
+name: 全庁向け本編
+filename: "{client}_{fy}_全庁レポート.pptx"
+slides:
+  - type: cover
+  - type: toc
+  - type: reading_guide
+  - type: response_overview
+  - type: response_by_attribute
+  - type: indicator_guide
+  - {type: summary_results, chapter_no: 1}
+  - {type: summary_state, chapter_no: 1}
+  - {type: indicator_distribution, chapter_no: 2}
+  - {type: category_scores, chapter_no: 2}
+  - {type: question_strengths, chapter_no: 2}
+  - {type: org_indicator_table, chapter_no: 3}
+  - {type: org_category_table, chapter_no: 3}
+  - {type: attribute_indicators, chapter_no: 3}
+  - {type: kd_category, chapter_no: 4}
+  - {type: kd_category_matrix, chapter_no: 4}
+  - {type: kd_question, chapter_no: 4, objective: all}
+  - {type: model_guide, chapter_no: 4}
+  - {type: ols, chapter_no: 4, model: category}
+  - {type: ols, chapter_no: 4, model: question}
+  - {type: model_fit_table, chapter_no: 4}
+  - {type: tree, chapter_no: 4, objective: all}
+  - {type: comments, chapter_no: 5}
+  - {type: policy, chapter_no: 6}
+  - {type: measures, chapter_no: 6}
+  - {type: kpi_plan, chapter_no: 7}
+  - type: audit_notes
+  - type: glossary

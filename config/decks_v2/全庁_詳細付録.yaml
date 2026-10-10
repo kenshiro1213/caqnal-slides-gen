@@ -1,0 +1,8 @@
+# 全庁向け 詳細付録（所属ごとにカテゴリ・目的指標 1 頁＋設問詳細）
+name: 全庁向け詳細付録
+filename: "{client}_{fy}_全庁レポート_詳細付録.pptx"
+slides:
+  - {type: cover, subtitle: 詳細付録}
+  - {type: org_indicator_table, title: A1. 所属別の主要指標, chapter_title: 詳細付録}
+  - {type: appendix_index}                # 案内の頁番号は、案内の直後から始まる前提で数える
+  - {type: unit_appendix, questions_per_page: 9}

@@ -1,0 +1,22 @@
+# 部局長向け（自部局の本編＋同じ部局内の詳細付録＋記入シート 1 枚）
+name: 部局長向け
+filename: "{client}_{fy}_{reader}向けレポート.pptx"
+slides:
+  - type: cover
+  - type: toc
+  - type: reading_guide
+  - type: response_overview
+  - {type: summary_results, chapter_no: 1}
+  - {type: summary_state, chapter_no: 1}
+  - {type: indicator_distribution, chapter_no: 2}
+  - {type: category_scores, chapter_no: 2}
+  - {type: question_strengths, chapter_no: 2}
+  - {type: org_indicator_table, chapter_no: 2, title: 部局内の主要指標}
+  - {type: org_category_table, chapter_no: 2, title: 部局内のカテゴリ比較}
+  - {type: model_guide, chapter_no: 2}
+  - {type: comments, chapter_no: 3}
+  - {type: measures, chapter_no: 3}
+  - {type: action_plan_sheet, chapter_no: 3}
+  - type: glossary
+  - {type: appendix_index}
+  - {type: unit_appendix, questions_per_page: 9}
