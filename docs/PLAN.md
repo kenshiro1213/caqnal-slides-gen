@@ -120,7 +120,7 @@ P0 → P1 → P2 の順にコミットを分けて進める。各フェーズの
 | P0 仕様の md 化・docs 更新 | 完了（2026-10-10） |
 | P1 案件設定と validate | 完了（2026-10-10）: `ingest/case_check.py`、`config/client_template.yaml`、佐賀市に v2 設定を追記 |
 | P2 normalize と run 管理 | 完了（2026-10-10）: `run.py`、`steps.py`、`ingest/normalize.py`、`caqnal run` / `caqnal normalize`。八戸市の回答 52,259 件・条件外 877 件が v1 の集計と一致 |
-| P3 aggregate | 未着手 |
+| P3 aggregate | 完了（2026-10-10）: `analysis/describe.py`、`caqnal aggregate`。回答状況（対象人数が無ければ計算不能）、全庁・組織（配下含む）・属性 × 設問・カテゴリ・目的指標、相関（Fisher z 区間）。八戸市で v1 と平均・肯定率・n が一致 |
 | P4 models | 未着手 |
 | P5 publish | 未着手 |
 | P6 compose と render | 未着手（デッキ構成は `docs/参考デッキ構成_佐賀市v2.md` を確認してから） |

@@ -23,6 +23,7 @@ REQUIRED = {
     "population": ["target_basis", "exclusion_rule", "duplicate_rule"],
     "publication": ["min_n"],
     "common9": ["status"],
+    "aggregate": ["category_missing"],
 }
 MODEL_REQUIRED = [("cv", "group_level"), ("cv", "folds"), ("tree", "max_depth"), ("tree", "min_leaf"),
                   ("bootstrap", "n")]

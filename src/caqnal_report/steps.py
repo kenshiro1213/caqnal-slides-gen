@@ -55,4 +55,40 @@ def step_normalize(run: Run) -> bool:
     return True
 
 
-__all__ = ["RunError", "open_or_create", "step_normalize", "step_validate"]
+def step_aggregate(run: Run) -> bool:
+    from .analysis.describe import aggregate, write_aggregated
+    from .ingest.normalize import read_normalized
+
+    run.require("aggregate")
+    try:
+        res = aggregate(run.cfg, read_normalized(run.step_dir("normalize")))
+    except ValueError as e:
+        print(f"[aggregate] failed: {e}")
+        run.record("aggregate", "failed", extra={"errors": [str(e)]})
+        return False
+    paths = write_aggregated(res, run.step_dir("aggregate"))
+    run.record("aggregate", "passed", outputs=paths, warnings=res.warnings, unresolved=res.unresolved,
+               extra={"reconcile": res.log.get("reconcile")})
+    print(f"[aggregate] passed → {run.step_dir('aggregate')}  集計対象 {res.log['analysed_n']} 名")
+    for w in res.warnings + [f"未確定 {u}" for u in res.unresolved]:
+        print(f"  {w}")
+    return True
+
+
+STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate}
+
+
+def run_until(run: Run, last: str) -> bool:
+    """未実行・未完了の工程を last まで順に実行する。"""
+    from .run import STEPS
+
+    for name in STEPS[: STEPS.index(last) + 1]:
+        rec = run.step(name)
+        if rec is not None and rec.get("state") == "passed":
+            continue
+        if not STEP_FUNCS[name](run):
+            return False
+    return True
+
+
+__all__ = ["run_until", "RunError", "open_or_create", "step_normalize", "step_validate"]

@@ -124,6 +124,9 @@ publication:                           # 公開条件（§7）
   secondary_suppression: true          # 親子・属性合計からの差し引き推測も非表示
   comments_min_respondents: 5          # テーマ件数 5 件未満は掲載しない（人事向け A6 の注記）
 
+aggregate:
+  category_missing: all_answered      # 事例: カテゴリは全構成設問に回答した職員で集計
+
 common9:
   status: not_conducted                # 共通9問は未実施 → 総合・3 要素の指標は出さない
 

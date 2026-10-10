@@ -25,6 +25,9 @@ publication:                           # 公開条件（§7）。最低人数は
   secondary_suppression: true          # 親子・属性合計からの差し引き推測も非表示
   comments_min_respondents: null
 
+aggregate:
+  category_missing: null              # カテゴリの欠損ルール: all_answered | any_answered
+
 common9:                               # 共通9問（§6）: not_conducted | undefined | implemented | partial
   status: null
   # questions: [..9 問..]              # implemented のとき

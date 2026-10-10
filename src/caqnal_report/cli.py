@@ -12,6 +12,7 @@
   v2 工程（output/runs/<run_id>/ に記録）
   caqnal run       --client 八戸市 [--new | --run RUN_ID]
   caqnal normalize --client 八戸市 [--run RUN_ID]
+  caqnal aggregate --client 八戸市 [--run RUN_ID]   （未実行の前工程も順に実行）
 """
 from __future__ import annotations
 
@@ -180,11 +181,11 @@ def cmd_run(args) -> None:
     print(run.summary())
 
 
-def cmd_normalize(args) -> None:
-    from .steps import open_or_create, step_normalize
+def _cmd_step(args) -> None:
+    from .steps import open_or_create, run_until
 
     run = open_or_create(_client(args), args.run, new=args.new)
-    ok = step_normalize(run)
+    ok = run_until(run, args.cmd)
     print(run.summary())
     if not ok:
         sys.exit(1)
@@ -236,7 +237,8 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_all)
 
     for name, fn, hlp in [("run", cmd_run, "v2: run の状態を表示（--new で新しい run を作る）"),
-                          ("normalize", cmd_normalize, "v2: 原資料 → 標準データ（run/private/normalized/）")]:
+                          ("normalize", _cmd_step, "v2: 原資料 → 標準データ（run/private/normalized/）"),
+                          ("aggregate", _cmd_step, "v2: 標準データ → private 集計（run/private/aggregate/）")]:
         p = sub.add_parser(name, help=hlp)
         add_client(p)
         p.add_argument("--run", default=None, help="run_id（省略時は最新。設定・原資料が変わっていれば新しい run）")
