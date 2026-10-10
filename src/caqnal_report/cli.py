@@ -14,6 +14,7 @@
   caqnal normalize --client 八戸市 [--run RUN_ID]
   caqnal aggregate --client 八戸市 [--run RUN_ID]   （未実行の前工程も順に実行）
   caqnal models    --client 八戸市 [--run RUN_ID]
+  caqnal publish   --client 八戸市 [--run RUN_ID]
 """
 from __future__ import annotations
 
@@ -240,7 +241,8 @@ def main(argv: list[str] | None = None) -> None:
     for name, fn, hlp in [("run", cmd_run, "v2: run の状態を表示（--new で新しい run を作る）"),
                           ("normalize", _cmd_step, "v2: 原資料 → 標準データ（run/private/normalized/）"),
                           ("aggregate", _cmd_step, "v2: 標準データ → private 集計（run/private/aggregate/）"),
-                          ("models", _cmd_step, "v2: 重回帰・決定木・検証・採否候補（run/private/models/）")]:
+                          ("models", _cmd_step, "v2: 重回帰・決定木・検証・採否候補（run/private/models/）"),
+                          ("publish", _cmd_step, "v2: 秘匿と読者別の公開データ（run/public/<読者>/）")]:
         p = sub.add_parser(name, help=hlp)
         add_client(p)
         p.add_argument("--run", default=None, help="run_id（省略時は最新。設定・原資料が変わっていれば新しい run）")

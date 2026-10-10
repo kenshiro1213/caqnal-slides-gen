@@ -103,8 +103,44 @@ def step_models(run: Run) -> bool:
     return True
 
 
+def _read_dir(d) -> dict:
+    import pandas as pd
+
+    out = {}
+    for p in sorted(d.glob("*.csv")):
+        try:
+            out[p.stem] = pd.read_csv(p, dtype={"scope_id": str, "unit_id": str, "respondent_id": str})
+        except pd.errors.EmptyDataError:
+            out[p.stem] = pd.DataFrame()
+    return out
+
+
+def step_publish(run: Run) -> bool:
+    from .analysis.publish import PublishError, publish, write_published
+    from .ingest.normalize import read_normalized
+
+    run.require("publish")
+    org = read_normalized(run.step_dir("normalize"))["org"]
+    try:
+        res = publish(run.cfg, _read_dir(run.step_dir("aggregate")), _read_dir(run.step_dir("models")), org)
+    except PublishError as e:
+        print(f"[publish] blocked: {e}")
+        run.record("publish", "blocked", extra={"errors": [str(e)]})
+        return False
+    paths = write_published(res, run.step_dir("publish"))
+    run.record("publish", "passed", outputs=paths, warnings=res.warnings, status="public_view_ready",
+               extra={"readers": list(res.readers), "suppressed": len(res.suppression)})
+    sup = res.suppression
+    print(f"[publish] passed → {run.step_dir('publish')}  読者 {list(res.readers)}")
+    print(f"  非表示: 組織・区分 {int(sup['unit_type'].isna().sum())} 件 / セル {int(sup['unit_type'].notna().sum())} 件"
+          f"（うち差し引き推測の防止 {int(sup['reason'].str.startswith('差し引き').sum())} 件）")
+    for w in res.warnings:
+        print(f"  {w}")
+    return True
+
+
 STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate,
-              "models": step_models}
+              "models": step_models, "publish": step_publish}
 
 
 def run_until(run: Run, last: str) -> bool:

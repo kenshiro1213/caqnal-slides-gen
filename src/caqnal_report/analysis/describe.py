@@ -81,10 +81,15 @@ def scores_long(cfg: ClientConfig, responses: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- スコープ
+def parent_map(org: pd.DataFrame) -> dict[str, str | None]:
+    """unit_id → 親 ID（最上位は None。CSV 経由の NaN も None にそろえる）。"""
+    return {u: (None if pd.isna(p) else p) for u, p in zip(org["unit_id"], org["parent_id"])}
+
+
 def org_members(org: pd.DataFrame, respondents: pd.DataFrame) -> dict[str, set[str]]:
     """組織 → 配下を含む回答者（対象・回答者・未照合の区別なし。呼び出し側で絞る）。"""
     children: dict[str, list[str]] = {}
-    for u, p in zip(org["unit_id"], org["parent_id"]):
+    for u, p in parent_map(org).items():
         if p is not None:
             children.setdefault(p, []).append(u)
 

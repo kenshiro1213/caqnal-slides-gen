@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import ClientConfig
-from .describe import categories, driver_ids, objectives
+from .describe import categories, driver_ids, objectives, parent_map
 
 CANDIDATES = ("採用", "参考", "保留", "推定不能")
 MODEL_NAMES = {"category": "カテゴリ重回帰", "question": "設問重回帰", "tree": "決定木"}
@@ -61,7 +61,7 @@ def _settings(cfg: ClientConfig) -> dict:
 
 def _groups(cfg: ClientConfig, respondents: pd.DataFrame, org: pd.DataFrame, level: str | None) -> pd.Series:
     """回答者 → 検証の分割単位（group_level の組織。配下の組織の職員はその祖先へ寄せる）。"""
-    parent = dict(zip(org["unit_id"], org["parent_id"]))
+    parent = parent_map(org)
     lvl = dict(zip(org["unit_id"], org["level"]))
 
     def up(u):
