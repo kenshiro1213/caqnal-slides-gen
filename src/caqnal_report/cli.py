@@ -70,13 +70,26 @@ def cmd_init(args) -> None:
 
 
 # ---------------------------------------------------------------- validate / analyze / render
-def cmd_validate(args) -> None:
+def _validate(cfg: C.ClientConfig) -> bool:
+    """案件設定の点検（v2）→ 回答データの照合。進めてよければ True。
+
+    案件設定が draft_unconfirmed でも、確定している準備（v1 の集計・描画）は進める。blocked は止める。
+    """
+    from .ingest.case_check import check_case
     from .ingest.validate import validate
 
-    cfg = _client(args)
+    case = check_case(cfg)
+    print(case.render())
+    if not cfg.path(cfg.raw["data"]["responses"]).exists():
+        print("[validate] 回答データ未受領のためデータ照合は行いません")
+        return False
     report = validate(cfg)
     print(report.render())
-    if report.has_errors:
+    return not (report.has_errors or case.status == "blocked")
+
+
+def cmd_validate(args) -> None:
+    if not _validate(_client(args)):
         sys.exit(1)
 
 
@@ -112,12 +125,8 @@ def cmd_render(args) -> None:
 
 
 def cmd_all(args) -> None:
-    from .ingest.validate import validate
-
     cfg = _client(args)
-    report = validate(cfg)
-    print(report.render())
-    if report.has_errors:
+    if not _validate(cfg):
         sys.exit(1)
     _analyze(cfg, cfg.out_dir / "intermediate")
     for p in _render(cfg, cfg.out_dir / "intermediate", cfg.out_dir, cfg.decks + ["excel"], args.pdf):

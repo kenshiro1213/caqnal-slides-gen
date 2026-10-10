@@ -1,0 +1,64 @@
+# =============================================================================
+# 新自治体の案件設定の雛形（仕様 v2 §2〜§10）。local-governments/<自治体>/client.yaml にコピーして使う
+# - null は「確認待ち」。埋めただけで確定扱いにしない。確認したら値を入れ、根拠をコメントに書く
+# - 他の自治体・前年度の値（最低人数・対象外・補正・目的指標・施策文）をコピーしない
+# - `uv run caqnal validate --client <自治体>` で未確定一覧と構造の誤りを確認する
+# v1 の項目（data / questions / scales / attributes / organization / indicators / decks）は
+# docs/自治体オンボーディング手順.md の「3. client.yaml を書く」を参照
+# =============================================================================
+inputs:                                # 原資料一覧（§3）
+  - {id: responses, path: data/R8_回答.csv, kind: 回答, sheet: null, header_row: null,
+     received: null, received_by: null, sha256: null}
+  - {id: questions, path: data/R8_設問.xlsx, kind: 設問票, sheet: null, header_row: null,
+     received: null, received_by: null, sha256: null}
+  - {id: roster, path: data/R8_対象者リスト_PII.csv, kind: 対象者リスト, sheet: null, header_row: null,
+     received: null, received_by: null, sha256: null}
+
+population:                            # 母数（§5）
+  target_basis: null                   # 例: 対象者リスト − 確定した対象外
+  exclusion_rule: null                 # 雇用区分・休職等の扱い（AI だけで決めない）
+  duplicate_rule: null                 # 重複回答の採用規則
+  unmatched_rule: null                 # 対象者に照合できない回答の扱い
+
+publication:                           # 公開条件（§7）。最低人数は案件ごとに確認する
+  min_n: null
+  secondary_suppression: true          # 親子・属性合計からの差し引き推測も非表示
+  comments_min_respondents: null
+
+common9:                               # 共通9問（§6）: not_conducted | undefined | implemented | partial
+  status: null
+  # questions: [..9 問..]              # implemented のとき
+  # definition: {weights: null, missing_rule: null}
+
+objectives:                            # 目的指標（§6）。平均して総合点にしない
+  - {id: null, name: null, short: null, question: null}
+
+corrections: []                        # 設問対応の補正 {target, change, reason, confirmed_by}
+
+attribute_rules:                       # 属性の算出（§5）
+  base_date: null                      # 年代・勤続の基準日
+  dimensions: null                     # 自治体が採用した全属性
+  age_bins: null
+  tenure_bins: null
+  future_date_rule: null
+
+org_dictionary: org.yaml               # 組織辞書。書式は下記
+# --- org.yaml ---
+# levels: [部局, 課]                    # 上位から順
+# units:
+#   - {id: "100", name: 総務部, parent: null, level: 部局, order: 1}
+#   - {id: "101", name: 総務課, parent: "100", level: 課, order: 2}
+
+readers:                               # 読者と閲覧範囲（§1, §14）。kind: all_staff | hr | dept_head | section_head
+  - {id: 全庁, kind: all_staff}
+  - {id: 人事担当, kind: hr}
+  # - {id: <部局>長, kind: dept_head, unit: "<unit_id>"}
+  # - {id: <課>長, kind: section_head, unit: "<unit_id>"}
+
+models:                                # 分析条件（§9, §10）
+  cv: {group_level: null, folds: null} # 予測を当てはめたい単位（部局/課）で分割
+  ols: {interval: null, cluster: null}
+  tree: {max_depth: null, min_leaf: null}
+  bootstrap: {n: null, seed: 0}
+
+unresolved: []                         # 未確定一覧（§3）

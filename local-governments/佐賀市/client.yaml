@@ -22,7 +22,7 @@ client:
   report_title: 職員エンゲージメント調査 分析レポート
   report_date: 2026年9月                 # 要確認
   survey_period: null                  # 回答 CSV 受領後に設定
-  target_count: 1360                   # 対象者リストの実データ行数（Excel 由来の空行を除く）。要確認
+  target_count: 1397                   # 事例値: ID一覧1,452 − 対象外55（population 参照）。受領データで再照合
 
 data:
   responses: data/R8_回答.csv            # 未受領
@@ -100,3 +100,65 @@ action_library:                        # 佐賀市のカテゴリ（大）→ �
     その他: null
 
 analysis: {}
+
+# =============================================================================
+# 仕様 v2（自治体共通版）の案件設定。null は「確認待ち」（埋めただけで確定扱いにしない）
+# 値の出典: spec/自治体向け/ 手順書 付録「佐賀市の検証事例」とサンプル PPTX。確認状況は `caqnal validate` の「未確定」に出る
+# =============================================================================
+inputs:                                # 原資料一覧（§3）。sha256 は受領時の値を記録する
+  - {id: questions, path: data/R8_設問_260805.xlsx, kind: 設問票, sheet: Sheet1, header_row: 3,
+     received: null, received_by: null, sha256: null}
+  - {id: roster, path: data/R8_対象者リスト_PII.csv, kind: 対象者リスト, sheet: null, header_row: 1,
+     received: null, received_by: null, sha256: null}
+  - {id: responses, path: data/R8_回答.csv, kind: 回答, sheet: null, header_row: 1,
+     received: null, received_by: null, sha256: null}
+
+population:                            # 母数（§5）
+  target_basis: ID一覧1,452名 − 対象外55名 = 対象1,397名（事例値。受領データで再照合）
+  exclusion_rule: null                 # 対象外 55 名の理由区分（雇用区分・休職等）
+  duplicate_rule: null                 # 重複回答の採用規則
+  unmatched_rule: 保留（全庁にも含めない）      # 事例: 未照合の有効回答 1 件は保留
+
+publication:                           # 公開条件（§7）
+  min_n: 5                             # 事例で採用（佐賀市の案件値。他自治体へ自動適用しない）
+  secondary_suppression: true          # 親子・属性合計からの差し引き推測も非表示
+  comments_min_respondents: 5          # テーマ件数 5 件未満は掲載しない（人事向け A6 の注記）
+
+common9:
+  status: not_conducted                # 共通9問は未実施 → 総合・3 要素の指標は出さない
+
+objectives:                            # 目的指標は個別に表示し、平均して総合点にしない（§6）
+  - {id: satisfaction, name: 働くことへの満足, short: 満足, question: Q59}
+  - {id: recommend, name: 推奨意向, short: 推奨, question: Q60}
+  - {id: retention, name: 継続勤務意向, short: 継続, question: Q61}
+  - {id: supervisor, name: 上司への満足, short: 上司満足, question: Q62}
+
+corrections:                           # 設問対応の補正（§4。理由と確認者を残す）
+  - {target: 回答列, change: 回答の末尾 4 列を設問票 Q59〜Q62 へ順に対応, reason: 回答ファイルの列名が設問票と一致しない（事例）, confirmed_by: null}
+  - {target: Q34, change: カテゴリ=評価・処遇、軸=働きやすさ, reason: 設問票の軸・カテゴリ欄が空欄, confirmed_by: null}
+  - {target: Q55, change: 設問文は原文（質問意図欄の文）のまま保持, reason: 設問票の設問文欄に質問意図が入っている, confirmed_by: null}
+
+attribute_rules:                       # 属性の算出（§5）。属性は対象者リストとの紐付けで付与
+  base_date: 2026-04-01                # 年代・勤続の基準日（事例値）
+  dimensions: [性別, 年代, 級区分, 勤続年数, 職名, 補職, 級名称, 機関]   # 事例で掲載した 8 属性
+  age_bins: [29, 39, 49]               # 29歳以下 / 30～39歳 / 40～49歳 / 50歳以上（事例の表示区分）
+  tenure_bins: null
+  future_date_rule: null
+
+# org_dictionary: org.yaml             # org.yaml（unit_id・親ID・名称・階層・表示順）は対象者リスト受領後に作成
+
+readers:                               # 成果物の読者と閲覧範囲（§1, §14）
+  - {id: 全庁, kind: all_staff}
+  - {id: 人事担当, kind: hr}
+  - {id: 総務部長, kind: dept_head, unit: null}     # 組織辞書の unit_id を入れる
+  - {id: 人事課長, kind: section_head, unit: null}
+
+models:                                # 分析条件（§9, §10）。事例の値
+  cv: {group_level: 部局, folds: 5}    # 25 部局を 5 分割し、未学習の部局で検証
+  ols: {interval: HC3, cluster: null}
+  tree: {max_depth: 2, min_leaf: 100}
+  bootstrap: {n: null, seed: 0}
+
+unresolved:                            # 未確定一覧（§3）
+  - 回答 CSV 未受領（2026-10-10 時点）
+  - 対象者リストの文字化け解消版（所属・属性の紐付けに必要）

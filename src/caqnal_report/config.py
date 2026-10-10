@@ -73,6 +73,7 @@ class ClientConfig:
     action_library: dict
     comment_themes: dict
     previous: list[Wave]
+    org_dictionary: dict | None = None
     questions_by_id: dict[str, dict] = field(init=False)
 
     def __post_init__(self) -> None:
@@ -185,6 +186,42 @@ class ClientConfig:
     def org_units(self) -> list[str]:
         return list(self.org.get("units", []))
 
+    # ---- 案件設定（仕様 v2）。未記載は空、記載した null は「確認待ち」 ----
+    @property
+    def inputs(self) -> list[dict]:
+        return list(self.raw.get("inputs") or [])
+
+    @property
+    def population(self) -> dict:
+        return self.raw.get("population") or {}
+
+    @property
+    def publication(self) -> dict:
+        return self.raw.get("publication") or {}
+
+    @property
+    def readers(self) -> list[dict]:
+        return list(self.raw.get("readers") or [])
+
+    @property
+    def models(self) -> dict:
+        return self.raw.get("models") or {}
+
+    @property
+    def common9(self) -> dict:
+        return self.raw.get("common9") or {}
+
+    @property
+    def org_units_dict(self) -> list[dict]:
+        """組織辞書（org.yaml の units）。unit_id は文字列。"""
+        return list((self.org_dictionary or {}).get("units") or [])
+
+    def org_unit(self, unit_id: str) -> dict:
+        for u in self.org_units_dict:
+            if u["id"] == str(unit_id):
+                return u
+        raise ConfigError(f"組織 {unit_id} が組織辞書にありません")
+
     # ---- デッキ ----
     def deck_path(self, name: str) -> Path:
         override = (self.raw.get("deck_overrides") or {}).get(name)
@@ -230,6 +267,16 @@ def load_client(name: str, clients_dir: Path | None = None) -> ClientConfig:
             )
         )
 
+    org_dictionary = None
+    if raw.get("org_dictionary"):
+        org_path = root / raw["org_dictionary"]
+        if org_path.exists():
+            org_dictionary = load_yaml(org_path) or {}
+            for u in org_dictionary.get("units") or []:   # ID は文字列で照合する（仕様 v2 §4）
+                u["id"] = str(u["id"]).strip()
+                if u.get("parent") is not None:
+                    u["parent"] = str(u["parent"]).strip()
+
     return ClientConfig(
         name=name,
         root=root,
@@ -240,4 +287,5 @@ def load_client(name: str, clients_dir: Path | None = None) -> ClientConfig:
         action_library=action_library,
         comment_themes=comment_themes,
         previous=previous,
+        org_dictionary=org_dictionary,
     )
