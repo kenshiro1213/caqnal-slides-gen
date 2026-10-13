@@ -5,7 +5,7 @@
   run.json
     run_id, client, created
     code      : コードの指紋（src/ 配下の .py のハッシュ）
-    config    : 設定の指紋（client.yaml・設問・組織辞書・共通 config）
+    config    : 設定の指紋（client.yaml・設問・組織辞書・interpretation.yaml・共通 config）
     inputs    : 原資料の指紋 {input_id: sha256}
     status    : draft_unconfirmed → validated → computed → public_view_ready → draft_qa_pending → release_ready
     steps     : {工程名: {state, at, code, config, inputs, outputs, warnings, unresolved}}
@@ -61,7 +61,8 @@ def code_fingerprint() -> str:
 
 
 def config_fingerprint(cfg: ClientConfig) -> str:
-    files = [cfg.root / "client.yaml", cfg.root / cfg.raw.get("questions", "questions.yaml")]
+    files = [cfg.root / "client.yaml", cfg.root / cfg.raw.get("questions", "questions.yaml"),
+             cfg.root / "interpretation.yaml"]                       # 解釈の文章が変わっても新しい run にする
     if cfg.raw.get("org_dictionary"):
         files.append(cfg.root / cfg.raw["org_dictionary"])
     for w in cfg.raw.get("data", {}).get("previous", []) or []:
@@ -152,7 +153,7 @@ class Run:
         """run 作成時から設定・原資料・コードが変わっていれば理由を返す。"""
         out = []
         if config_fingerprint(self.cfg) != self.data["config"]:
-            out.append("設定（client.yaml・設問・組織辞書・共通 config）が変わりました")
+            out.append("設定（client.yaml・設問・組織辞書・interpretation.yaml・共通 config）が変わりました")
         if input_fingerprints(self.cfg) != self.data["inputs"]:
             out.append("原資料が変わりました")
         if code_fingerprint() != self.data["code"]:

@@ -88,6 +88,10 @@ def cover(ctx: Ctx, spec: dict) -> None:
              size=34, bold=True, color="FFFFFF")
     add_text(s, th, th.mx, 4.45, th.W - 2 * th.mx, 0.6, f"{spec.get('subtitle', '調査結果・施策提案')}｜{ctx.label}",
              size=18, color="FFFFFF")
+    st = (d.compose.get("interpretation_status") or {}).get("status", "none") if d.compose.get("source", {}).get("interpretation") else None
+    if st and st != "confirmed":                  # 解釈・施策の文章が担当者未確認
+        add_text(s, th, th.mx, 5.2, th.W - 2 * th.mx, 0.5, "〔下書き〕示唆・施策の文章は担当者の確認前", size=14,
+                 bold=True, color=th.hexv("gold"))
     add_text(s, th, th.mx, th.H - 1.3, th.W - 2 * th.mx, 0.4,
              f"{c.get('report_date', '')}　© CAQNAL CO.,LTD.", size=11, color="D5D8DA")
 
@@ -911,9 +915,10 @@ def measures(ctx: Ctx, spec: dict) -> None:
             add_rect(p.slide, th, x, p.body_top, w, 0.5, th.hexv("navy"))
             text(p, x + 0.15, p.body_top, w - 0.3, 0.5, h, size=th.sizes["small"], bold=True, color="FFFFFF",
                  anchor="middle")
-            body = body if isinstance(body, list) else [body] if body else [PLACEHOLDER]
+            body = ["・" + b for b in body] if isinstance(body, list) else [body] if body else [PLACEHOLDER]
             text(p, x + 0.15, p.body_top + 0.65, w - 0.3, p.body_bottom - p.body_top - 0.8, body,
-                 size=th.sizes["small"], color=th.hexv("ink") if body != [PLACEHOLDER] else th.hexv("placeholder"))
+                 size=th.sizes["small"], color=th.hexv("ink") if body != [PLACEHOLDER] else th.hexv("placeholder"),
+                 line_spacing=1.4)
 
 
 @register("kpi_plan")

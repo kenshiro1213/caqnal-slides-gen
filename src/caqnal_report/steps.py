@@ -146,8 +146,14 @@ def step_compose(run: Run) -> bool:
     unresolved = [u for s in ("validate", "normalize", "aggregate", "models") for u in (run.step(s) or {}).get("unresolved", [])]
     res = compose(run.cfg, run.step_dir("publish"), unresolved)
     paths = write_compose(res, run.step_dir("compose"))
-    missing = [] if (run.cfg.root / "interpretation.yaml").exists() else \
-        ["interpretation.yaml が無いため、示唆・方針・施策の頁は未記入の枠になる"]
+    ipath = run.cfg.root / "interpretation.yaml"
+    if not ipath.exists():
+        missing = ["interpretation.yaml が無いため、示唆・方針・施策の頁は未記入の枠になる"]
+    else:
+        from .config import load_yaml
+
+        st = (load_yaml(ipath) or {}).get("status")
+        missing = [] if st == "confirmed" else ["interpretation.yaml は下書き（担当者が確認して status: confirmed にする）"]
     run.record("compose", "passed", outputs=paths, unresolved=missing)
     print(f"[compose] passed → {run.step_dir('compose')}" + (f"  ※ {missing[0]}" if missing else ""))
     return True

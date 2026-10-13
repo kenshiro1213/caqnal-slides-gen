@@ -11,6 +11,9 @@ interpretation.yaml（任意。無ければ該当頁は「未記入」の枠に�
   measures:        [{title, message, evidence, actions, owners, trial, note}]
   kpis:            [{area, practice, judge, survey}]
   sources:         [{name, revised, pages}]
+  status:          draft（AI・担当者の下書き。未確認） | confirmed（担当者が確認済み）。無ければ draft 扱い
+  confirmed_by / confirmed_on: 確認者・確認日（status: confirmed のとき）
+  unit_readers:    部局長・課長向けの共通の文章（上と同じ構造）。上の全体向けの文章は全庁・人事の読者にだけ使う
   readers:         {読者ID: 上と同じ構造（その読者だけ上書き）}
 """
 from __future__ import annotations
@@ -56,10 +59,16 @@ def compose(cfg: ClientConfig, public_dir: Path, run_unresolved: list[str]) -> d
     interp = load_yaml(path) if path.exists() else {}
     interp = interp or {}
     per_reader = interp.pop("readers", {}) or {}
+    unit_common = interp.pop("unit_readers", {}) or {}
+    meta = {k: interp.pop(k, None) for k in ("status", "drafted_by", "drafted_on", "confirmed_by", "confirmed_on")}
+    if path.exists() and meta["status"] != "confirmed":
+        run_unresolved = run_unresolved + ["interpretation.yaml は下書き（担当者が確認して status: confirmed にするまで納品版にしない）"]
     out = {}
     for reader in cfg.readers or [{"id": ALL, "kind": "all_staff"}]:
         tables, _ = read_public(public_dir, reader["id"])
-        body = deep_merge(copy.deepcopy(interp), per_reader.get(reader["id"]))
+        base = interp if reader["kind"] in ("all_staff", "hr") else unit_common   # 全体向けの文章を所属長版に流用しない
+        body = deep_merge(copy.deepcopy(base), per_reader.get(reader["id"]))
+        body["interpretation_status"] = meta
         body["facts"] = facts(cfg, tables)
         body["unresolved"] = run_unresolved
         body["source"] = {"interpretation": path.name if path.exists() else None,

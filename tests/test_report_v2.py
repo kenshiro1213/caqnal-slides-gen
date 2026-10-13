@@ -105,3 +105,20 @@ def test_internal_method_deck(run):
     for word in ("8 工程の流れ", "点数と肯定・中立・否定の計算", "未学習データでの検証", "モデルの採否", "匿名性"):
         assert word in body
     assert "外部配布不可" in body
+
+
+def test_compose_keeps_all_staff_text_out_of_unit_decks(run, tmp_path):
+    import yaml
+
+    from caqnal_report.analysis.compose import compose
+
+    c = copy.deepcopy(run.cfg)
+    c.root = tmp_path
+    (tmp_path / "interpretation.yaml").write_text(yaml.safe_dump({
+        "status": "draft", "insights": {"summary_results": "全庁の見立て"},
+        "unit_readers": {"insights": {"summary_results": "部局共通の見立て"}},
+        "readers": {"総務部長": {"insights": {"category_scores": "総務部の示唆"}}}}, allow_unicode=True), encoding="utf-8")
+    res = compose(c, run.step_dir("publish"), [])
+    assert res["全庁"]["insights"]["summary_results"] == "全庁の見立て"
+    assert res["総務部長"]["insights"] == {"summary_results": "部局共通の見立て", "category_scores": "総務部の示唆"}
+    assert any("下書き" in u for u in res["全庁"]["unresolved"])
