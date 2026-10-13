@@ -306,12 +306,17 @@ def _check_charts(deck: DeckContent, label: str) -> list[Check]:
                   mismatch)]
 
 
-def _check_content(deck: DeckContent, label: str, kind: str, deck_name: str) -> list[Check]:
+def _check_content(deck: DeckContent, label: str, kind: str, deck_name: str, own_hidden: bool = False) -> list[Check]:
     out = []
     ph = [f"p{s.no} {s.title[:30]}" for s in deck.slides if any(PLACEHOLDER in t for t in s.texts)]
     out.append(Check(6, f"未記入の枠（{label}）", "open" if ph else "ok",
                      f"{len(ph)} 頁に「未記入」の枠（interpretation.yaml に記入）" if ph else "なし", ph))
     if "付録" in deck_name:
+        return out
+    if own_hidden:                               # 自所属が非表示: 数値の無い短い版。記入シートだけ確認する
+        n = sum("記入シート" in s.title for s in deck.slides)
+        out.append(Check(6, f"所属非表示の版（{label}）", "ok" if n == 1 else "ng",
+                         f"自所属が非表示のため数値の無い版。記入シート {n} 枚"))
         return out
     titles = [s.title for s in deck.slides]
     n_sum = sum("サマリー" in t for t in titles)
@@ -407,7 +412,9 @@ def verify(run: Run, images: bool = False) -> QAReport:
             checks.append(_check_models(run, deck, label, rid))
             checks += _check_leaks(deck, label, hidden, out_of_scope, comments, others)
             checks += _check_charts(deck, label)
-            checks += _check_content(deck, label, reader["kind"], name)
+            own = manifest.get("own_unit")
+            checks += _check_content(deck, label, reader["kind"], name,
+                                     own_hidden=bool(own) and f"組織:{own}" in manifest.get("hidden_scopes", []))
             if images:
                 checks.append(_render_images(path, run.step_dir("verify") / "pages" / path.stem, len(deck.slides)))
     if paths:

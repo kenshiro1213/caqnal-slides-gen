@@ -2,7 +2,7 @@
 
 読者 kind ごとの既定デッキ:
   all_staff → 全庁, 全庁_詳細付録 / hr → 人事 / dept_head → 部局長 / section_head → 課長
-client.yaml の readers[].decks で上書きできる。
+client.yaml の readers[].decks で上書きできる。自所属が非表示の部局長・課長は「所属非表示」デッキ（数値なし）にする。
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from .slides import REGISTRY, Ctx, fill_toc
 
 DEFAULT_DECKS = {"all_staff": ["全庁", "全庁_詳細付録"], "hr": ["人事"], "dept_head": ["部局長"],
                  "section_head": ["課長"]}
+HIDDEN_DECK = "所属非表示"
 READER_LABEL = {"all_staff": "全庁向け", "hr": "人事担当向け", "dept_head": "部局長向け", "section_head": "課長向け"}
 
 
@@ -73,9 +74,13 @@ def build(cfg: ClientConfig, data: ReportData, deck: dict, reader: dict, out_pat
 def render_reader(cfg: ClientConfig, public_dir: Path, compose_dir: Path, reader: dict, out_dir: Path) -> list[Path]:
     data = ReportData.load(cfg, public_dir, compose_dir, reader["id"])
     decks = reader.get("decks") or DEFAULT_DECKS[reader["kind"]]
+    if data.own_unit and data.hidden("組織", data.own_unit):
+        decks = [HIDDEN_DECK]                    # 自所属が非表示: 数値の無い短い版（全庁へ広げない）
     out = []
     for name in decks:
         deck = deck_spec(cfg, name)
+        if name == HIDDEN_DECK:
+            deck = dict(deck, filename=deck_spec(cfg, DEFAULT_DECKS[reader["kind"]][0])["filename"])
         fname = deck["filename"].format(client=cfg.client["name"], fy=cfg.fiscal_year, reader=reader["id"])
         out.append(build(cfg, data, deck, reader, out_dir / fname))
     return out

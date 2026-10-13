@@ -20,7 +20,7 @@ population:                            # 母数（§5）
   duplicate_rule: null                 # 重複回答の採用規則
   unmatched_rule: null                 # 対象者に照合できない回答の扱い
 
-publication:                           # 公開条件（§7）。最低人数は案件ごとに確認する
+publication:                           # 公開条件（§7）。最低人数は自治体ごとに決める（既定値なし。5 名を自動で使わない）
   min_n: null
   secondary_suppression: true          # 親子・属性合計からの差し引き推測も非表示
   comments_min_respondents: null
@@ -80,3 +80,6 @@ models:                                # 分析条件（§9, §10）
   bootstrap: {n: null, seed: 0}
 
 unresolved: []                         # 未確定一覧（§3）
+
+theme:                                 # 任意。フォントは noto（Noto Sans JP、既定）| meiryo（Meiryo UI）。変えると新しい run になる
+  font: {preset: noto}

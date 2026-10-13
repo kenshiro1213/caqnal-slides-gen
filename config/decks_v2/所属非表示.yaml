@@ -1,0 +1,9 @@
+# 自所属が少人数・差し引き推測の防止で非表示になった部局長・課長向け（数値は載せない。全庁へ広げない）
+# ファイル名は読者の既定デッキ（部局長／課長）と同じにする
+name: 所属非表示
+filename: "{client}_{fy}_{reader}向けレポート.pptx"
+slides:
+  - type: cover
+  - type: hidden_notice
+  - {type: action_plan_sheet, boxes: [重点として確認すること, 背景として職員と話すこと, 具体的な行動, 担当・支援者, 期限・必要な時間, 人事・全庁へ相談すること]}
+  - type: glossary

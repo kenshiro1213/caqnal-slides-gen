@@ -1,0 +1,22 @@
+# 八戸市 組織辞書（2026-10-13 作成）。回答項目 Q5 の選択肢＝部局。課の回答項目は無いため部局のみ
+# unit_id は v1 の自動採番（U001〜、設問マスタの選択肢順）と同じにしている
+levels: [部局]
+units:
+  - {id: "U001", name: 危機管理部, parent: null, level: 部局, order: 1}
+  - {id: "U002", name: 総合政策部, parent: null, level: 部局, order: 2}
+  - {id: "U003", name: 総務部, parent: null, level: 部局, order: 3}
+  - {id: "U004", name: 財政部, parent: null, level: 部局, order: 4}
+  - {id: "U005", name: 商工労働まちづくり部, parent: null, level: 部局, order: 5}
+  - {id: "U006", name: 観光文化スポーツ部, parent: null, level: 部局, order: 6}
+  - {id: "U007", name: 農林水産部, parent: null, level: 部局, order: 7}
+  - {id: "U008", name: 福祉部, parent: null, level: 部局, order: 8}
+  - {id: "U009", name: こども健康部, parent: null, level: 部局, order: 9}
+  - {id: "U010", name: 市民環境部, parent: null, level: 部局, order: 10}
+  - {id: "U011", name: 建設部, parent: null, level: 部局, order: 11}
+  - {id: "U012", name: 都市整備部, parent: null, level: 部局, order: 12}
+  - {id: "U013", name: 出納室, parent: null, level: 部局, order: 13}
+  - {id: "U014", name: 交通部, parent: null, level: 部局, order: 14}
+  - {id: "U015", name: 教育委員会, parent: null, level: 部局, order: 15}
+  - {id: "U016", name: 監査委員事務局, parent: null, level: 部局, order: 16}
+  - {id: "U017", name: 議会事務局, parent: null, level: 部局, order: 17}
+  - {id: "U018", name: 広域市町村圏事務組合, parent: null, level: 部局, order: 18}

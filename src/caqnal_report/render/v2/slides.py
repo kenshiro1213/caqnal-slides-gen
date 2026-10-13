@@ -90,6 +90,19 @@ def cover(ctx: Ctx, spec: dict) -> None:
              f"{c.get('report_date', '')}　© CAQNAL CO.,LTD.", size=11, color="D5D8DA")
 
 
+@register("hidden_notice")
+def hidden_notice(ctx: Ctx, spec: dict) -> None:
+    """自所属が少人数・差し引き推測の防止で非表示のときの説明頁。数値は載せない。"""
+    th, d = ctx.th, ctx.d
+    p = ctx.page(f"{ctx.scope_name}の結果について", "回答者が少ないため、所属単位の結果は掲載しない",
+                 chapter="結果の扱い", note="非表示の基準は全所属に同じく適用している。人数そのものも推測につながるため記載しない。")
+    text(p, p.left, p.body_top, p.width * 0.62, 3.6, [
+        f"{ctx.scope_name}は、有効回答が最低公開人数（{d.manifest.get('min_n')} 名）に満たないか、"
+        "他の所属の値から差し引きで推測できるため、点数・回答分布・人数を非表示にしている。",
+        "職場の状態は、全庁向けレポートの全庁の結果・カテゴリ・キードライバーを参考に、職員との対話で確かめる。",
+        "次頁の記入シートで、重点として確認する事項と、人事・全庁へ相談する事項を整理する。"], size=th.sizes["body"])
+
+
 @register("toc")
 def toc(ctx: Ctx, spec: dict) -> None:
     p = ctx.page("目次", chapter="")

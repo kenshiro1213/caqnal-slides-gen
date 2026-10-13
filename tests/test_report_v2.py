@@ -20,7 +20,8 @@ def run(cfg, tmp_path_factory):
                   "common9": {"status": "not_conducted"},
                   "models": {"cv": {"group_level": "部局", "folds": 5}, "tree": {"max_depth": 2, "min_leaf": 40},
                              "bootstrap": {"n": 10, "seed": 0}},
-                  "readers": [{"id": "全庁", "kind": "all_staff"}, {"id": "総務部長", "kind": "dept_head", "unit": "U003"}]})
+                  "readers": [{"id": "全庁", "kind": "all_staff"}, {"id": "総務部長", "kind": "dept_head", "unit": "U003"},
+                              {"id": "監査委員事務局長", "kind": "dept_head", "unit": "U016"}]})
     c.raw["org_dictionary"] = "org.yaml"
     c.org_dictionary = {"levels": ["部局"], "units": [{"id": f"U{i:03d}", "name": n, "parent": None, "level": "部局",
                                                       "order": i} for i, n in enumerate(c.org_units, 1)]}
@@ -64,6 +65,25 @@ def test_dept_head_sees_only_own_department(run, cfg):
     assert "総務部" in body
     assert not [u for u in others if u in body]
     assert "アクションプラン記入シート" in body
+
+
+def test_hidden_own_unit_gets_short_deck_without_values(run):
+    deck = next(run.step_dir("render").glob("*監査委員事務局長*.pptx"))
+    texts = _texts(deck)
+    body = "\n".join(texts)
+    assert len(texts) == 4 and "監査委員事務局の結果について" in body
+    assert "アクションプラン記入シート" in body and "サマリー" not in body
+    assert not re.search(r"\d+\.\d", body)                       # 点数・率は 1 つも無い
+
+
+def test_font_preset_switches(cfg):
+    from caqnal_report.render.v2.base import V2Theme
+
+    c = copy.deepcopy(cfg)
+    c.theme["font"]["preset"] = "meiryo"
+    assert V2Theme(c).family == "Meiryo UI"
+    c.theme["font"]["preset"] = "noto"
+    assert V2Theme(c).family == "Noto Sans JP"
 
 
 def test_appendix_index_pages_match(run):

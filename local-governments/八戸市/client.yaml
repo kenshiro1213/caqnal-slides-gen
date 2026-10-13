@@ -97,18 +97,40 @@ decks: [全庁, 部局別, 1pager, 手法解説]   # 手法解説 = インナー
 
 analysis: {}                          # 標準閾値からの上書きなし
 
-# ---- 仕様 v2 の案件設定（2026-10-10 追加。値は v1 の納品物と同じ前提で置いた暫定値。CAQNAL 確認後に unresolved から外す）
-publication: {min_n: 5, secondary_suppression: true}     # v1 の anonymity.min_n と同じ
+# ---- 仕様 v2 の案件設定（2026-10-10 追加、2026-10-13 に公開条件・目的指標・分析条件・読者を確定。残る未確定は inputs と population）
+publication: {min_n: 5, secondary_suppression: true}     # 2026-10-13 確定（自治体ごとに設定。v1 納品と同じ 5 名）
 aggregate: {category_missing: all_answered}
 common9: {status: not_conducted}
-objectives:                            # outcome 設問を個別の目的指標として扱う
+objectives:                            # 2026-10-13 確定。outcome 設問を個別の目的指標として扱う
   - {id: satisfaction, name: 働くことへの満足, short: 満足, question: Q58}
   - {id: recommend, name: 推奨意向, short: 推奨, question: Q59}
   - {id: retention, name: 継続勤務意向, short: 継続, question: Q60}
-models:
+models:                                # 2026-10-13 確定
   cv: {group_level: 部局, folds: 5}
   ols: {interval: HC3}
   tree: {max_depth: 2, min_leaf: 50}
   bootstrap: {n: 200, seed: 0}
-unresolved:
-  - publication / objectives / models は暫定値（v1 と同じ前提）。CAQNAL の確認待ち
+org_dictionary: org.yaml
+readers:                               # 2026-10-13 決定: 全庁＋詳細付録・人事担当・全 18 部局の部局長版。課長版は課の回答項目が無いため作らない
+  - {id: 全庁, kind: all_staff}
+  - {id: 人事担当, kind: hr}
+  - {id: 部局長_危機管理部, kind: dept_head, unit: "U001"}
+  - {id: 部局長_総合政策部, kind: dept_head, unit: "U002"}
+  - {id: 部局長_総務部, kind: dept_head, unit: "U003"}
+  - {id: 部局長_財政部, kind: dept_head, unit: "U004"}
+  - {id: 部局長_商工労働まちづくり部, kind: dept_head, unit: "U005"}
+  - {id: 部局長_観光文化スポーツ部, kind: dept_head, unit: "U006"}
+  - {id: 部局長_農林水産部, kind: dept_head, unit: "U007"}
+  - {id: 部局長_福祉部, kind: dept_head, unit: "U008"}
+  - {id: 部局長_こども健康部, kind: dept_head, unit: "U009"}
+  - {id: 部局長_市民環境部, kind: dept_head, unit: "U010"}
+  - {id: 部局長_建設部, kind: dept_head, unit: "U011"}
+  - {id: 部局長_都市整備部, kind: dept_head, unit: "U012"}
+  - {id: 部局長_出納室, kind: dept_head, unit: "U013"}
+  - {id: 部局長_交通部, kind: dept_head, unit: "U014"}
+  - {id: 部局長_教育委員会, kind: dept_head, unit: "U015"}
+  - {id: 部局長_監査委員事務局, kind: dept_head, unit: "U016"}
+  - {id: 部局長_議会事務局, kind: dept_head, unit: "U017"}
+  - {id: 部局長_広域市町村圏事務組合, kind: dept_head, unit: "U018"}
+theme:
+  font: {preset: noto}                # noto | meiryo（Meiryo UI）。切り替えると新しい run になる

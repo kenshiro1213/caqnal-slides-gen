@@ -163,6 +163,8 @@ def bar_chart(p: Page, x, y, w, h, categories: list[str], series: dict[str, list
               horizontal=True, stacked=False, percent=False, number_format='0.0', labels=True, legend=None,
               max_value=None, label_size=None):
     th = p.th
+    if not categories:                           # 全て非表示などで項目が無い
+        return None
     data = CategoryChartData(number_format=number_format)
     data.categories = categories
     for name, vals in series.items():
@@ -214,6 +216,8 @@ def bar_chart(p: Page, x, y, w, h, categories: list[str], series: dict[str, list
 
 def line_chart(p: Page, x, y, w, h, categories: list[str], series: dict[str, list], colors: list[str]):
     th = p.th
+    if not categories:
+        return None
     data = CategoryChartData(number_format="0.0")
     data.categories = categories
     for name, vals in series.items():
