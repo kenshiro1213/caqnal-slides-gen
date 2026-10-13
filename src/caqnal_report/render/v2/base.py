@@ -11,7 +11,7 @@ from lxml import etree
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData, XyChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
+from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
@@ -199,6 +199,8 @@ def bar_chart(p: Page, x, y, w, h, categories: list[str], series: dict[str, list
     _axis_style(va, th, visible=False, gridlines=False)
     if horizontal:
         ca.reverse_order = True                  # 上から順に並べる
+    if any(isinstance(v, (int, float)) and v < 0 for vals in series.values() for v in vals):
+        ca.tick_label_position = XL_TICK_LABEL_POSITION.LOW   # 負の棒と項目名が重ならないよう軸の外側へ
     if max_value is not None:
         va.maximum_scale = max_value
         va.minimum_scale = 0

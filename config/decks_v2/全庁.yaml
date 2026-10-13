@@ -1,5 +1,7 @@
 # =============================================================================
-# 全庁向け 本編（仕様 v2 §14、docs/参考デッキ構成_佐賀市v2.md「全庁本編」）
+# 全庁向け 本編（仕様 v2 §14、docs/参考デッキ構成_佐賀市v2.md「全庁本編」、プロンプト集 v2.1 の 4）
+# 流れ: 見方 → 回答状況 → 指標の注意 → サマリー2枚 → 指標・カテゴリ・設問・属性・職員の声 → KD → モデル
+#       → 大方針 → 重点施策 → 実行計画・確認指標 → 用語集・集計条件・付録の案内
 # type は src/caqnal_report/render/v2/slides.py の REGISTRY。頁数は組織数・属性数・目的指標数で変わる
 # =============================================================================
 name: 全庁向け本編
@@ -16,9 +18,10 @@ slides:
   - {type: indicator_distribution, chapter_no: 2}
   - {type: category_scores, chapter_no: 2}
   - {type: question_strengths, chapter_no: 2}
-  - {type: org_indicator_table, chapter_no: 3}
+  - {type: org_indicator_table, chapter_no: 3, chapter_title: 所属・属性の違いと職員の声}
   - {type: org_category_table, chapter_no: 3}
   - {type: attribute_indicators, chapter_no: 3}
+  - {type: comments, chapter_no: 3}
   - {type: kd_category, chapter_no: 4}
   - {type: kd_category_matrix, chapter_no: 4}
   - {type: kd_question, chapter_no: 4, objective: all}
@@ -27,9 +30,9 @@ slides:
   - {type: ols, chapter_no: 4, model: question}
   - {type: model_fit_table, chapter_no: 4}
   - {type: tree, chapter_no: 4, objective: all}
-  - {type: comments, chapter_no: 5}
-  - {type: policy, chapter_no: 6}
-  - {type: measures, chapter_no: 6}
-  - {type: kpi_plan, chapter_no: 7}
-  - type: audit_notes
+  - {type: policy, chapter_no: 5}
+  - {type: measures, chapter_no: 5}
+  - {type: kpi_plan, chapter_no: 6}
   - type: glossary
+  - type: audit_notes
+  - {type: appendix_guide, deck: 全庁_詳細付録}

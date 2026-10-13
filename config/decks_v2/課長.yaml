@@ -16,7 +16,8 @@ slides:
   - {type: model_guide, chapter_no: 2}
   - {type: comments, chapter_no: 3}
   - {type: measures, chapter_no: 3}
-  - {type: action_plan_sheet, chapter_no: 3}
+  - {type: action_plan_sheet, chapter_no: 3,
+     boxes: [重点課題, 背景として確認すること, 具体的な行動, 担当・支援者, 期限・減らす仕事, 実施の確認・見直しの条件]}
   - type: glossary
   - {type: appendix_index}
   - {type: unit_appendix, questions_per_page: 9}

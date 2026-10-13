@@ -26,6 +26,9 @@ slides:
   - {type: policy, chapter_no: 5}
   - {type: measures, chapter_no: 5}
   - {type: kpi_plan, chapter_no: 6}
+  - {type: action_plan_sheet, chapter_no: 6, title: 施策の選択と実施条件 記入シート,
+     boxes: [選択する施策・根拠, 試行対象と選び方, 人事・部局・課長の役割, 初動と試行期間の工程,
+             工数の前提・未算入の業務, 確認指標の分母・継続／修正／中止の条件]}
   - type: audit_notes
   - type: glossary
   - {type: org_indicator_table, title: A1. 部局別主要指標, chapter_title: 詳細付録}

@@ -13,8 +13,10 @@
 
 出力（run/private/models/）
   model_fit.csv     objective_id, model, n, k, rank, df_resid, r2, adj_r2, cv_r2, cv_mae, base_mae, folds,
-                    cv_groups, vif_max, root_stability, candidate, reasons, decision
-  ols_coefs.csv     objective_id, model, term, beta, ci_low, ci_high, p, vif
+                    cv_groups, vif_max, cluster_groups, cluster_sign_unstable, root_stability, candidate,
+                    reasons, decision
+  ols_coefs.csv     objective_id, model, term, beta, ci_low, ci_high, p, vif, ci_low_cluster, ci_high_cluster
+                    （クラスタ区間は感度分析。検証単位と同じ組織で、同じ組織の回答が似ることを考慮する）
   tree_nodes.csv    objective_id, node, parent, depth, side, feature, threshold, n, mean, pos, is_leaf, below_min_n
   tree_stability.csv objective_id, feature, root_freq
 """
@@ -146,6 +148,13 @@ def _ols_model(X: pd.DataFrame, y: pd.Series, groups: pd.Series | None, s: dict)
     vif = _vif(X)
     coefs = pd.DataFrame({"term": X.columns, "beta": res.params[1:], "ci_low": ci[1:, 0], "ci_high": ci[1:, 1],
                           "p": res.pvalues[1:], "vif": vif.values})
+    # 感度分析: 同じ組織の回答が似ることを考慮したクラスタ頑健区間（主の区間が cluster でないとき）
+    if s["interval"] != "cluster" and groups is not None and groups.notna().all() and groups.nunique() >= 2:
+        cl = _ols_fit(X, y, "cluster", groups).conf_int()
+        coefs["ci_low_cluster"], coefs["ci_high_cluster"] = cl[1:, 0], cl[1:, 1]
+        crosses = ((coefs.ci_low > 0) | (coefs.ci_high < 0)) & (coefs.ci_low_cluster <= 0) & (coefs.ci_high_cluster >= 0)
+        fit["cluster_groups"] = int(groups.nunique())
+        fit["cluster_sign_unstable"] = int(crosses.sum())
     fit.update({"r2": float(res.rsquared), "adj_r2": float(res.rsquared_adj), "vif_max": float(vif.max())})
     fit.update(_cv_predict(X, y, groups, s["folds"], _ols_fit_predict))
     return fit, coefs
@@ -302,16 +311,21 @@ def fit_models(cfg: ClientConfig, rs: pd.DataFrame, respondents: pd.DataFrame, o
     if not s["boot_n"]:
         out.unresolved.append("models.bootstrap.n 未確定のため、決定木の再抽出による安定性を確認していない")
     cols_fit = ["objective_id", "model", "n", "k", "rank", "df_resid", "r2", "adj_r2", "cv_r2", "cv_mae", "base_mae",
-                "folds", "cv_groups", "vif_max", "root_stability", "candidate", "reasons", "decision"]
+                "folds", "cv_groups", "vif_max", "cluster_groups", "cluster_sign_unstable", "root_stability", "candidate",
+                "reasons", "decision"]
     out.tables["model_fit"] = pd.DataFrame(fits).reindex(columns=cols_fit)
     out.tables["ols_coefs"] = (pd.concat(coefs, ignore_index=True) if coefs else pd.DataFrame())
     if not out.tables["ols_coefs"].empty:
-        out.tables["ols_coefs"] = out.tables["ols_coefs"][["objective_id", "model", "term", "beta", "ci_low", "ci_high",
-                                                           "p", "vif"]]
+        out.tables["ols_coefs"] = out.tables["ols_coefs"].reindex(
+            columns=["objective_id", "model", "term", "beta", "ci_low", "ci_high", "p", "vif", "ci_low_cluster",
+                     "ci_high_cluster"])
     out.tables["tree_nodes"] = pd.concat(nodes, ignore_index=True) if nodes else pd.DataFrame()
     out.tables["tree_stability"] = pd.concat(stab, ignore_index=True) if stab else pd.DataFrame()
     out.log["settings"] = {k: v for k, v in s.items() if k != "decisions"}
     out.log["interval"] = f"{s['interval']}（標準化係数 β の 95% 区間）"
+    if s["interval"] != "cluster":
+        out.log["sensitivity"] = (f"{s['group_level']} 単位のクラスタ頑健区間（ci_low_cluster / ci_high_cluster）。"
+                                  "cluster_sign_unstable＝主の区間では 0 を含まないがクラスタ区間では 0 を含む項目数")
     return out
 
 

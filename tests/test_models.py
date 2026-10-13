@@ -38,6 +38,10 @@ def test_fit_models_outputs(data):
     for oid, g in leaves.groupby("objective_id"):           # 葉の人数の合計 = 木の人数
         assert g["n"].sum() == nodes[(nodes.objective_id == oid) & (nodes.node == 0)]["n"].iloc[0]
     assert (leaves["below_min_n"] == (leaves["n"] < 60)).all()
+    cf = res.tables["ols_coefs"]                            # 感度分析: 組織単位のクラスタ頑健区間
+    assert cf[["ci_low_cluster", "ci_high_cluster"]].notna().all().all()
+    assert ((cf.ci_low_cluster <= cf.beta) & (cf.beta <= cf.ci_high_cluster)).all()
+    assert (ols["cluster_groups"] == ols["cv_groups"]).all()
 
 
 def test_rank_deficient_is_not_estimable():

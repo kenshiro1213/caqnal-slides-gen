@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 
 from ..pptx_helpers import add_line, add_rect, add_text
@@ -43,14 +44,25 @@ class Ctx:
     def page(self, title: str, message: str | None = None, note: str | None = None, chapter: str | None = None):
         n = len(self.prs.slides._sldIdLst) + 1  # noqa: SLF001
         ch = self.chapter if chapter is None else chapter
-        if ch and (not self.toc or self.toc[-1][0] != ch):
+        if ch and (not self.toc or _chapter_key(self.toc[-1][0]) != _chapter_key(ch)):
             self.toc.append((ch, n))
         return frame(self.prs, self.th, title, self.label, self.footer, n, message, note)
+
+
+def _chapter_key(ch: str) -> str:
+    """同じ章番号の頁は目次で 1 行にまとめる（番号が無ければ章名で比べる）。"""
+    m = re.match(r"(\d+)\. ", ch)
+    return m.group(1) if m else ch
 
 
 def _chap(ctx: Ctx, spec: dict, title: str) -> str:
     no = spec.get("chapter_no")
     return f"{no}. {title}" if no not in (None, "") else title
+
+
+def _chapter(ctx: Ctx, spec: dict, default: str) -> str:
+    """目次に載る章名。デッキ設定の chapter_title で上書きできる。"""
+    return _chap(ctx, spec, spec.get("chapter_title") or default)
 
 
 def _scope_or_all(ctx: Ctx):
@@ -247,7 +259,7 @@ def summary_results(ctx: Ctx, spec: dict) -> None:
     else:
         msg = "目的指標は非表示"
     p = ctx.page(_chap(ctx, spec, f"{ctx.scope_name if sc[0] != ALL else '全庁'}の結果サマリー"), msg,
-                 chapter=_chap(ctx, spec, "サマリー"),
+                 chapter=_chapter(ctx, spec, "サマリー"),
                  note="点数は100点満点。肯定＝肯定的回答の割合。" + _vs_all_note(ctx))
     k = max(len(objs), 1)
     w = min(3.6, (p.width * 0.62 - 0.2 * (k - 1)) / k)
@@ -283,7 +295,7 @@ def summary_state(ctx: Ctx, spec: dict) -> None:
     rows_in = (d.compose.get("summary_state") or [])
     p = ctx.page(_chap(ctx, spec, "組織状態・示唆・解決策"),
                  d.text("summary_state_message") or f"{PLACEHOLDER} 現在の組織状態を一文で（interpretation.yaml の insights.summary_state_message）",
-                 chapter=_chap(ctx, spec, "サマリー"),
+                 chapter=_chapter(ctx, spec, "サマリー"),
                  note="事実から導いた解釈と協議案。解釈は仮説であり、各職場の業務と運用で確かめる。")
     heads = ["", "調査で確認した事実", "組織人事としての示唆", "実行する方向〔協議案〕"]
     if not rows_in:
@@ -312,7 +324,7 @@ def indicator_distribution(ctx: Ctx, spec: dict) -> None:
     objs = [(o, d.stat(*sc, "目的指標", o["id"])) for o in d.objectives]
     objs = [(o, v) for o, v in objs if v and isnum(v.get("score"))]
     msg = "、".join(f"{o.get('short') or o['name']} {f1(v['score'])}点" for o, v in objs)
-    p = ctx.page(_chap(ctx, spec, f"{len(d.objectives)}指標の点数と回答分布"), msg, chapter=_chap(ctx, spec, "指標と職場の状態"),
+    p = ctx.page(_chap(ctx, spec, f"{len(d.objectives)}指標の点数と回答分布"), msg, chapter=_chapter(ctx, spec, "指標と職場の状態"),
                  note="、".join(f"{o['question']} n＝{num(v['n'])}" for o, v in objs) + "。" + _vs_all_note(ctx))
     cats = [o.get("name") for o, _ in objs]
     series = {"肯定": [round(v["pos"] * 100, 1) for _, v in objs], "中立": [round(v["neu"] * 100, 1) for _, v in objs],
@@ -343,7 +355,7 @@ def category_scores(ctx: Ctx, spec: dict) -> None:
     low = sorted(rows, key=lambda t: t[1]["score"])[:2]
     msg = "、".join(f"{c} {f1(v['score'])}点" for c, v in low) + " が相対的に低い" if low else ""
     ns = [int(v["n"]) for _, v in rows]
-    p = ctx.page(_chap(ctx, spec, "カテゴリ別の職場の状態"), msg, chapter=_chap(ctx, spec, "指標と職場の状態"),
+    p = ctx.page(_chap(ctx, spec, "カテゴリ別の職場の状態"), msg, chapter=_chapter(ctx, spec, "指標と職場の状態"),
                  note=f"カテゴリは構成設問に回答した職員の平均（n＝{min(ns):,}～{max(ns):,}）。設問ごとの結果は詳細付録で確認する。"
                  if ns else None)
     series = {ctx.scope_name: [round(v["score"], 1) for _, v in rows]}
@@ -366,7 +378,7 @@ def question_strengths(ctx: Ctx, spec: dict) -> None:
     top, bot = _rank_questions(d, sc, n, True), _rank_questions(d, sc, n, False)
     msg = (f"最も高いのは {top.iloc[0].unit_id}（{f1(top.iloc[0].score)}点）、最も低いのは {bot.iloc[0].unit_id}"
            f"（{f1(bot.iloc[0].score)}点）") if len(top) and len(bot) else ""
-    p = ctx.page(_chap(ctx, spec, "設問からみる強み・課題"), msg, chapter=_chap(ctx, spec, "指標と職場の状態"),
+    p = ctx.page(_chap(ctx, spec, "設問からみる強み・課題"), msg, chapter=_chapter(ctx, spec, "指標と職場の状態"),
                  note=f"説明設問 {len(d.drivers)} 問の上位{n}問と下位{n}問。所属・設問ごとの分布と全文は詳細付録へ。")
     cw = p.width * 0.29
     for j, (head, df, color) in enumerate((("点数の高い設問", top, th.hexv("navy")),
@@ -425,7 +437,7 @@ def org_indicator_table(ctx: Ctx, spec: dict) -> None:
         suffix = f" {k}/{len(pages)}" if len(pages) > 1 else ""
         p = ctx.page(_chap(ctx, spec, (spec.get("title") or "所属別の主要指標") + suffix),
                      "組織順に指標を確認し、各所属で背景と必要な支援を話し合う" if k == 1 else None,
-                     chapter=_chap(ctx, spec, spec.get("chapter_title", "所属・属性による違い")),
+                     chapter=_chapter(ctx, spec, "所属・属性による違い"),
                      note=f"組織順。部局は配下の職員を含む。全庁との差が ±{hl}pt 以上を色で表示（青＝高い、茶＝低い）。少人数と差し引きで推測できる所属は人数・率・点数をまとめて非表示。")
         head = ["所属", "回答／対象", "回答率"] + [o.get("short") or o["name"] for o in d.objectives]
         rows = [head]
@@ -465,7 +477,7 @@ def org_category_table(ctx: Ctx, spec: dict) -> None:
         suffix = f" {k}/{len(pages)}" if len(pages) > 1 else ""
         p = ctx.page(_chap(ctx, spec, (spec.get("title") or "所属別のカテゴリ比較") + suffix),
                      "カテゴリの違いを確認し、全庁共通の課題と所属ごとの支援を整理する" if k == 1 else None,
-                     chapter=_chap(ctx, spec, spec.get("chapter_title", "所属・属性による違い")),
+                     chapter=_chapter(ctx, spec, "所属・属性による違い"),
                      note=f"点数は100点満点。全庁との差が ±{hl}pt 以上を色で表示（青＝高い、茶＝低い）。非表示は少人数または差し引きで推測できる所属。")
         rows = [["所属"] + [c[:8] for c in cats]]
         base = {c: (d.stat(ALL, ALL, "カテゴリ", c) or {}).get("score") for c in cats}
@@ -512,7 +524,7 @@ def attribute_indicators(ctx: Ctx, spec: dict) -> None:
                 lo, hi = min(pts, key=lambda t: t[1]), max(pts, key=lambda t: t[1])
                 msg = f"{first['name']}は {hi[0]} {f1(hi[1])}点、{lo[0]} {f1(lo[1])}点"
         p = ctx.page(_chap(ctx, spec, f"{dim}別の{len(d.objectives)}指標"), msg,
-                     chapter=_chap(ctx, spec, "所属・属性による違い"),
+                     chapter=_chapter(ctx, spec, "所属・属性による違い"),
                      note="区分間の比較で、個人の経年変化ではない。属性が原因とは判断しない（所属・職責の重なりは未調整）。非表示の区分は掲載しない。")
         cw = p.width * 0.58
         line_chart(p, p.left, p.body_top, cw, p.body_bottom - p.body_top - 0.1, vals, series,
@@ -546,7 +558,7 @@ def kd_category(ctx: Ctx, spec: dict) -> None:
         msg = f"{d.obj_name(oid)}との相関は {best[0]}（r＝{best[2]:.3f}）が最も強い" if best else ""
         ns = [t[3] for t in rows_d if isnum(t[3])]
         p = ctx.page(_chap(ctx, spec, f"カテゴリ別キードライバー｜{d.obj_name(oid, True)}"), msg,
-                     chapter=_chap(ctx, spec, "改善につながる項目"),
+                     chapter=_chapter(ctx, spec, "改善につながる項目"),
                      note=f"Pearson 相関（全庁）。カテゴリは構成設問に回答した職員の平均。ペアの有効回答 n＝{min(ns):,}～{max(ns):,}。相関は因果効果を示さない。" if ns else None)
         rows = [["カテゴリ", "点数", "相関 r"]] + [[t[0], f1(t[1]), f1(t[2], 3)] for t in rows_d]
         tw = p.width * 0.36
@@ -563,7 +575,7 @@ def kd_category(ctx: Ctx, spec: dict) -> None:
 def kd_category_matrix(ctx: Ctx, spec: dict) -> None:
     th, d = ctx.th, ctx.d
     p = ctx.page(_chap(ctx, spec, f"カテゴリ別キードライバー｜{len(d.objectives)}指標"),
-                 "目的指標ごとに関連の強いカテゴリが異なるかを確認する", chapter=_chap(ctx, spec, "改善につながる項目"),
+                 "目的指標ごとに関連の強いカテゴリが異なるかを確認する", chapter=_chapter(ctx, spec, "改善につながる項目"),
                  note="Pearson 相関（全庁）。各指標で r が最も大きいカテゴリを太字。")
     rows = [["カテゴリ", "点数"] + [d.obj_name(o["id"], True) for o in d.objectives]]
     bold = set()
@@ -600,7 +612,7 @@ def kd_question(ctx: Ctx, spec: dict) -> None:
         s0 = d.stat(ALL, ALL, "設問", r0.unit_id) or {}
         p = ctx.page(_chap(ctx, spec, f"設問別キードライバー｜{d.obj_name(oid)}"),
                      f"{d.qlabel(r0.unit_id, 28)} は {f1(s0.get('score'))}点、{d.obj_name(oid, True)}との相関は r＝{r0.r:.3f}",
-                     chapter=_chap(ctx, spec, "改善につながる項目"),
+                     chapter=_chapter(ctx, spec, "改善につながる項目"),
                      note=f"目的指標：{d.obj_name(oid)}。説明変数：説明設問 {len(d.drivers)} 問。ペアの有効回答 n＝{int(c.n.min()):,}～{int(c.n.max()):,}。多数の相関を並べているため、上位の順位は誤差で入れ替わり得る。相関は因果効果を示さない。")
         rows = [["関連が強い設問", "点数", "相関 r"]]
         for r in top.itertuples():
@@ -640,7 +652,7 @@ def model_guide(ctx: Ctx, spec: dict) -> None:
     s = d.cfg.models
     cv, tree = s.get("cv") or {}, s.get("tree") or {}
     p = ctx.page(_chap(ctx, spec, "相関・重回帰・決定木の読み方"), "3つの分析は問いが違う。どれも原因や施策の効果を示すものではない",
-                 chapter=_chap(ctx, spec, "改善につながる項目"),
+                 chapter=_chapter(ctx, spec, "改善につながる項目"),
                  note=f"検証: {cv.get('group_level') or '回答者'}単位で {cv.get('folds')} 分割し、学習に使わなかった{cv.get('group_level') or '回答者'}を予測。"
                  f"決定木: 深さ {tree.get('max_depth')}／葉の最低 {tree.get('min_leaf')} 名。")
     items = [("相関", "1つの項目と目的指標が一緒に高低する程度。他の項目の影響を含む。"),
@@ -656,6 +668,14 @@ def model_guide(ctx: Ctx, spec: dict) -> None:
         text(p, p.left + 2.8, y, p.width - 2.8, 1.0, b, size=th.sizes["small"], anchor="middle")
 
 
+def _cluster_note(fit: dict) -> str:
+    if not isnum(fit.get("cluster_sign_unstable")):
+        return ""
+    k = int(fit["cluster_sign_unstable"])
+    return (f"組織単位の区間（感度分析）で 0 を含むようになる項目 {k} 件。" if k
+            else "組織単位の区間（感度分析）でも結論は変わらない。")
+
+
 @register("ols")
 def ols(ctx: Ctx, spec: dict) -> None:
     th, d = ctx.th, ctx.d
@@ -669,7 +689,7 @@ def ols(ctx: Ctx, spec: dict) -> None:
         title = _chap(ctx, spec, f"重回帰｜{d.obj_name(oid, True)}と関連する{label}")
         if fit.get("candidate") in ("推定不能", "保留") and not isinstance(fit.get("decision"), str):
             p = ctx.page(title, f"この重回帰は{fit['candidate']}。係数は施策の根拠に使わない",
-                         chapter=_chap(ctx, spec, "改善につながる項目"))
+                         chapter=_chapter(ctx, spec, "改善につながる項目"))
             text(p, p.left, p.body_top, p.width * 0.6, 3, ["理由: " + str(fit.get("reasons") or ""),
                  "代わりの読み方: 相関と点数の表、所属・属性の比較、職員の声を合わせて改善の論点を確認する。"],
                  size=th.sizes["body"])
@@ -681,9 +701,10 @@ def ols(ctx: Ctx, spec: dict) -> None:
         top = cf.iloc[0]
         msg = (f"{len(cf) if model == 'category' else len(d.drivers)}の{label}を同時に考慮しても、"
                f"{top.term if model == 'category' else top.term}との関連が残る（β＝{top.beta:.3f}）")
-        p = ctx.page(title, msg, chapter=_chap(ctx, spec, "改善につながる項目"),
+        p = ctx.page(title, msg, chapter=_chapter(ctx, spec, "改善につながる項目"),
                      note=f"標準化係数 β／95%区間（{d.cfg.models.get('ols', {}).get('interval') or 'HC3'}）。n＝{num(fit['n'])}。"
-                     f"VIF 最大 {f1(fit.get('vif_max'))}。採否: {_status_of(fit)}。係数は他の項目を同時に入れた条件での関連で、改善幅ではない。")
+                     f"VIF 最大 {f1(fit.get('vif_max'))}。{_cluster_note(fit)}採否: {_status_of(fit)}。"
+                     "係数は他の項目を同時に入れた条件での関連で、改善幅ではない。")
         rows = [[label, "β", "95%区間"]] + [[n, f"{r.beta:.3f}", f"{r.ci_low:.3f}～{r.ci_high:.3f}"]
                                             for n, r in zip(names, cf.itertuples())]
         tw = p.width * 0.42
@@ -706,7 +727,7 @@ def model_fit_table(ctx: Ctx, spec: dict) -> None:
     th, d = ctx.th, ctx.d
     f = d.tables.get("model_fit")
     p = ctx.page(_chap(ctx, spec, f"{len(d.objectives)}指標・3モデルの当てはまり"),
-                 "未学習の組織での誤差を、平均だけで予測した場合と比べる", chapter=_chap(ctx, spec, "改善につながる項目"),
+                 "未学習の組織での誤差を、平均だけで予測した場合と比べる", chapter=_chapter(ctx, spec, "改善につながる項目"),
                  note="検証 R² は全ての未学習データの予測を結合して算出。MAE＝平均絶対誤差（100点換算の点）。大きな R² は因果効果や施策による得点上昇を示さない。")
     names = {"category": "カテゴリ重回帰", "question": "設問重回帰", "tree": "決定木"}
     rows = [["目的指標", "モデル", "n", "R²", "調整済み R²", "検証 R²", "検証 MAE", "平均のみ MAE", "採否", "理由"]]
@@ -742,7 +763,7 @@ def tree(ctx: Ctx, spec: dict) -> None:
             freq = s.root_freq.iloc[0] if len(s) else 0.0
         p = ctx.page(_chap(ctx, spec, f"決定木｜{d.obj_name(oid)}"),
                      f"{d.qlabel(root.feature, 30)}への回答で、{d.obj_name(oid, True)}の平均が分かれる",
-                     chapter=_chap(ctx, spec, "改善につながる項目"),
+                     chapter=_chapter(ctx, spec, "改善につながる項目"),
                      note=f"n＝{num(root.n)}、完全回答者の群平均。深さ {d.cfg.models['tree']['max_depth']}／最小葉 {d.cfg.models['tree']['min_leaf']} 名。"
                      f"検証 R²＝{f1(fit.get('cv_r2'), 3)}。最初の分岐の再抽出頻度 {pct(freq) if freq is not None else NA}。採否: {_status_of(fit)}。"
                      "群の平均差は、施策で同じ幅だけ改善することを示さない。")
@@ -798,7 +819,7 @@ def tree(ctx: Ctx, spec: dict) -> None:
 # ================================================================= 職員の声・施策（compose の文章）
 def _placeholder_page(ctx: Ctx, spec: dict, title: str, chapter: str, what: list[str], key: str) -> None:
     th = ctx.th
-    p = ctx.page(_chap(ctx, spec, title), f"{PLACEHOLDER} {title}は担当者が作成する", chapter=_chap(ctx, spec, chapter),
+    p = ctx.page(_chap(ctx, spec, title), f"{PLACEHOLDER} {title}は担当者が作成する", chapter=_chapter(ctx, spec, chapter),
                  note=f"interpretation.yaml の {key} に記入すると、この頁が置き換わる。")
     add_rect(p.slide, th, p.left, p.body_top, p.width, p.body_bottom - p.body_top, th.hexv("bg"), th.hexv("gold"))
     text(p, p.left + 0.4, p.body_top + 0.3, p.width - 0.8, p.body_bottom - p.body_top - 0.6,
@@ -818,7 +839,7 @@ def comments(ctx: Ctx, spec: dict) -> None:
     total = cm.get("writers")
     themes = cm["themes"]
     p = ctx.page(_chap(ctx, spec, "職員の声｜全体の傾向"), cm.get("message") or "声を改善場面の仮説に変え、定量結果と合わせて背景を確認する",
-                 chapter=_chap(ctx, spec, "職員の声"),
+                 chapter=_chapter(ctx, spec, "職員の声"),
                  note=f"複数テーマ分類。分母は記述者 {num(total)} 名。全職員の意見分布や重要度順位ではない。")
     cw = p.width * 0.5
     bar_chart(p, p.left, p.body_top, cw, p.body_bottom - p.body_top, [t["name"] for t in themes],
@@ -837,7 +858,7 @@ def policy(ctx: Ctx, spec: dict) -> None:
                            "観測事実 → 背景仮説 → 大方針 の筋道（根拠の頁と有効 n）",
                            "部局・人事・首長部局の役割の分け方"], "policy")
         return
-    p = ctx.page(_chap(ctx, spec, "改善の大方針〔協議案〕"), pol.get("message"), chapter=_chap(ctx, spec, "施策の方向"),
+    p = ctx.page(_chap(ctx, spec, "改善の大方針〔協議案〕"), pol.get("message"), chapter=_chapter(ctx, spec, "施策の方向"),
                  note=pol.get("note"))
     add_rect(p.slide, th, p.left, p.body_top, p.width, 1.0, th.hexv("navy"))
     text(p, p.left + 0.3, p.body_top, p.width - 0.6, 1.0, pol.get("title", ""), size=18, bold=True, color="FFFFFF",
@@ -866,7 +887,7 @@ def measures(ctx: Ctx, spec: dict) -> None:
         return
     for i, m in enumerate(ms, 1):
         p = ctx.page(_chap(ctx, spec, f"重点施策{i}｜{m.get('title', '')}"), m.get("message"),
-                     chapter=_chap(ctx, spec, "施策の方向"), note=m.get("note"))
+                     chapter=_chapter(ctx, spec, "施策の方向"), note=m.get("note"))
         cols = [("結果と組織人事の示唆", m.get("evidence")), ("実行内容", m.get("actions")),
                 ("担当・支援・権限", m.get("owners")), ("試行と確認", m.get("trial"))]
         w = (p.width - 0.9) / 4
@@ -886,7 +907,7 @@ def kpi_plan(ctx: Ctx, spec: dict) -> None:
     rows_in = d.compose.get("kpis") or []
     p = ctx.page(_chap(ctx, spec, "実施・理解・実行性を確認する指標〔協議案〕"),
                  "件数で終わらず、正味の負担と職員の理解を確認する" if rows_in else f"{PLACEHOLDER} 確認指標は担当者が設定する",
-                 chapter=_chap(ctx, spec, "施策の方向"),
+                 chapter=_chapter(ctx, spec, "実行計画と確認指標"),
                  note="短期の運用指標と次回調査の状態指標を組み合わせる。回帰係数から得点の改善を保証しない。")
     rows = [["重点領域", "実施・職員の実感", "90日の判断材料", "次回調査で確認する設問"]]
     for r in rows_in:
@@ -900,13 +921,14 @@ def kpi_plan(ctx: Ctx, spec: dict) -> None:
 @register("action_plan_sheet")
 def action_plan_sheet(ctx: Ctx, spec: dict) -> None:
     th = ctx.th
-    p = ctx.page(_chap(ctx, spec, "アクションプラン記入シート"), "重点課題を選び、実行できる内容と確認方法を合意する",
-                 chapter=_chap(ctx, spec, "施策の方向"), note="重点施策の案を参考に、職場で優先する課題を選んで各欄へ記入する。")
+    p = ctx.page(_chap(ctx, spec, spec.get("title") or "アクションプラン記入シート"), "重点課題を選び、実行できる内容と確認方法を合意する",
+                 chapter=_chapter(ctx, spec, "施策の方向"), note="重点施策の案を参考に、職場で優先する課題を選んで各欄へ記入する。")
     text(p, p.left, p.body_top, p.width, 0.4, f"対象：{ctx.scope_name}　　記入者：　　　　　　　　記入日：　　　年　　月　　日",
          size=th.sizes["body"])
-    boxes = ["重点課題・根拠となる結果", "90日後に目指す状態", "具体的な取組・最初の30日", "担当・協力者／開始日・期限",
-             "確認指標・継続／見直しの基準", "必要な支援・確保する時間・権限"]
-    w, h = (p.width - 0.3) / 2, (p.body_bottom - p.body_top - 0.6 - 0.4) / 3
+    boxes = spec.get("boxes") or ["重点課題", "根拠となる結果", "具体的な行動", "担当・支援者",
+                                  "期限・必要な時間", "確認指標・見直しの条件"]
+    rows_n = math.ceil(len(boxes) / 2)
+    w, h = (p.width - 0.3) / 2, (p.body_bottom - p.body_top - 0.6 - 0.2 * (rows_n - 1)) / rows_n
     for i, b in enumerate(boxes):
         x = p.left + (i % 2) * (w + 0.3)
         y = p.body_top + 0.6 + (i // 2) * (h + 0.2)
@@ -960,6 +982,29 @@ def glossary(ctx: Ctx, spec: dict) -> None:
     p = ctx.page("資料. 用語集", chapter="資料")
     rows = [["用語", "意味"]] + [[a, b] for a, b in GLOSSARY]
     table(p, p.left, p.body_top, p.width, rows, widths=[1.2, 5], row_h=0.55, aligns=["left", "left"],
+          size=th.sizes["small"])
+
+
+@register("appendix_guide")
+def appendix_guide(ctx: Ctx, spec: dict) -> None:
+    """本編の最後に置く、別冊の詳細付録の案内。spec.deck に付録のデッキ名。"""
+    from .deck import deck_spec  # 循環 import を避ける
+
+    th, d = ctx.th, ctx.d
+    c = d.cfg.client
+    deck = deck_spec(d.cfg, spec.get("deck", "全庁_詳細付録"))
+    fname = deck["filename"].format(client=c["name"], fy=d.cfg.fiscal_year, reader=d.reader_id)
+    units = _appendix_units(ctx)
+    n_hidden = sum(d.hidden("組織", u) for u, _ in units)
+    p = ctx.page("資料. 詳細付録の案内", "所属ごとの全カテゴリ・全設問は別冊の詳細付録で確認する", chapter="資料",
+                 note="付録の値は本編と同じ集計から作成。組織順に並べ、順位は付けていない。")
+    rows = [["項目", "内容"],
+            ["ファイル", fname],
+            ["収録範囲", f"{len(units)} 所属（うち少人数等で非表示 {n_hidden}）"],
+            ["収録内容", f"主要指標の一覧、所属ごとのカテゴリ・目的指標、全{len(d.cfg.likert_ids())}問の設問全文・n・点数・"
+                       "肯定／中立／否定・全庁差"],
+            ["探し方", "付録冒頭の「所属別の詳細ページ案内」に所属ごとのページ範囲を記載"]]
+    table(p, p.left, p.body_top, p.width, rows, widths=[1.2, 6], row_h=0.62, aligns=["left", "left"],
           size=th.sizes["small"])
 
 
