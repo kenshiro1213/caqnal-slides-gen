@@ -94,3 +94,14 @@ def test_appendix_index_pages_match(run):
     assert m, idx[:300]
     first = int(m.group(1))
     assert "A2. 危機管理部｜カテゴリ" in texts[first - 1]
+
+
+def test_internal_method_deck(run):
+    from caqnal_report.render.v2.method import build_method
+
+    path = build_method(run.cfg, run)
+    assert path.parent.name == "internal"
+    body = "\n".join(_texts(path))
+    for word in ("8 工程の流れ", "点数と肯定・中立・否定の計算", "未学習データでの検証", "モデルの採否", "匿名性"):
+        assert word in body
+    assert "外部配布不可" in body

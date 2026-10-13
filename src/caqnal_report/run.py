@@ -198,6 +198,9 @@ class Run:
         self.save()
 
     def _invalidate_after(self, name: str) -> None:
+        internal = self.dir / "internal"           # 社内向け資料も古くなる
+        if name != "verify" and internal.exists():
+            shutil.rmtree(internal)
         later = STEPS[STEPS.index(name) + 1:]
         for s in later:
             if s in self.data["steps"]:

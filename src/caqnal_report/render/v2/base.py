@@ -69,7 +69,7 @@ def blank(prs: Presentation):
 
 # ---------------------------------------------------------------- 骨格
 def frame(prs, th: V2Theme, title: str, label: str, footer: str, page_no: int, message: str | None = None,
-          note: str | None = None) -> Page:
+          note: str | None = None, kind: str = "調査結果・施策提案") -> Page:
     s = blank(prs)
     W, H, mx = th.W, th.H, th.mx
     add_rect(s, th, 0, 0, W, 0.12, th.hexv("navy"))
@@ -77,7 +77,7 @@ def frame(prs, th: V2Theme, title: str, label: str, footer: str, page_no: int, m
              anchor="middle")
     add_text(s, th, W * 0.62, 0.35, W * 0.38 - mx, 0.3, label, size=th.sizes["note"], color=th.hexv("ink_soft"),
              align="right")
-    add_text(s, th, W * 0.62, 0.62, W * 0.38 - mx, 0.3, "調査結果・施策提案", size=th.sizes["note"],
+    add_text(s, th, W * 0.62, 0.62, W * 0.38 - mx, 0.3, kind, size=th.sizes["note"],
              color=th.hexv("ink_soft"), align="right")
     add_line(s, th, mx, 1.05, W - mx, 1.05, th.hexv("gold"), 1.5)
     if message:

@@ -1,0 +1,25 @@
+# 社内向け 分析手法解説（仕様 v2）。run の設定・記録・公開データから作る。外部配布しない
+# type は src/caqnal_report/render/v2/method.py（m_*）と slides.py の REGISTRY
+name: 分析手法解説（社内向け）
+filename: "{client}_{fy}_分析手法解説_社内向け.pptx"
+slides:
+  - {type: cover, subtitle: 分析手法解説}
+  - type: toc
+  - type: m_pipeline
+  - type: m_run_status
+  - type: m_settings
+  - type: m_unresolved
+  - type: m_normalize
+  - type: m_scoring
+  - type: m_aggregate
+  - type: m_anonymity
+  - type: m_readers
+  - type: m_kd
+  - type: m_ols
+  - type: m_validation
+  - type: m_tree
+  - type: m_adoption
+  - type: m_compose
+  - type: m_qa
+  - type: m_limits
+  - type: m_files

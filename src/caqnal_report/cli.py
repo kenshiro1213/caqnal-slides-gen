@@ -20,6 +20,7 @@
   caqnal verify    --client 八戸市 [--run RUN_ID] [--images]   （品質検証 → run/qa/qa_report.md）
   caqnal signoff   --client 八戸市 --reviewer 名前 --checked interpretation,sources,pages,editable
                    （人の確認を記録して verify をやり直す。揃えば release_ready → output/release/<run_id>/）
+  caqnal method    --client 八戸市 [--run RUN_ID]   （社内向け 分析手法解説 → run/internal/）
 """
 from __future__ import annotations
 
@@ -201,6 +202,18 @@ def _cmd_step(args) -> None:
         sys.exit(1)
 
 
+def cmd_method(args) -> None:
+    from .render.v2.method import build_method
+    from .run import Run
+
+    cfg = _client(args)
+    run = Run.open(cfg, args.run) if args.run else Run.latest(cfg)
+    if run is None or (run.step("render") or {}).get("state") != "passed":
+        print("render 済みの run がありません（caqnal report を先に実行）")
+        sys.exit(1)
+    print(f"wrote {build_method(cfg, run)}")
+
+
 def cmd_signoff(args) -> None:
     from .qa.verify import write_signoff
     from .run import Run
@@ -280,6 +293,11 @@ def main(argv: list[str] | None = None) -> None:
         if name == "verify":
             p.add_argument("--images", action="store_true", help="全頁を PNG に書き出す（run/qa/pages/）")
         p.set_defaults(func=fn)
+
+    p = sub.add_parser("method", help="v2: 社内向け 分析手法解説（run/internal/）")
+    add_client(p)
+    p.add_argument("--run", default=None)
+    p.set_defaults(func=cmd_method)
 
     p = sub.add_parser("signoff", help="v2: 人の確認を記録して verify をやり直す")
     add_client(p)

@@ -36,6 +36,8 @@ class Ctx:
     toc: list[tuple[str, int]] = field(default_factory=list)
     toc_slide: object = None
     page_index: dict = field(default_factory=dict)
+    kind: str = "調査結果・施策提案"                # 頁右上の資料区分
+    extra: dict = field(default_factory=dict)    # 社内向け資料など、公開データ以外に使う記録（run のログ等）
 
     @property
     def scope_name(self) -> str:
@@ -46,7 +48,7 @@ class Ctx:
         ch = self.chapter if chapter is None else chapter
         if ch and (not self.toc or _chapter_key(self.toc[-1][0]) != _chapter_key(ch)):
             self.toc.append((ch, n))
-        return frame(self.prs, self.th, title, self.label, self.footer, n, message, note)
+        return frame(self.prs, self.th, title, self.label, self.footer, n, message, note, kind=self.kind)
 
 
 def _chapter_key(ch: str) -> str:
