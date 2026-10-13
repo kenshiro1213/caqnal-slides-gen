@@ -1,4 +1,4 @@
-# 八戸市 経年対応表 R7→R8（確定版）。status: 比較可 / 参考比較 / 比較不可
+# テスト市 経年対応表 R7→R8（確定版）。status: 比較可 / 参考比較 / 比較不可
 map:
 - current: Q1
   current_text: あなたの性別は？
@@ -86,7 +86,7 @@ map:
   previous: Q20
   status: 比較可
 - current: Q22
-  current_text: 八戸市役所内に目標にしたい人物がいる
+  current_text: テスト市役所内に目標にしたい人物がいる
   previous: Q21
   status: 比較可
 - current: Q23
@@ -241,7 +241,7 @@ map:
   status: 比較不可
   note: 新規設問
 - current: Q58
-  current_text: 八戸市役所で働いていることに満足している
+  current_text: テスト市役所で働いていることに満足している
   previous: Q49
   status: 比較可
 - current: Q59
@@ -249,7 +249,7 @@ map:
   previous: Q50
   status: 比較可
 - current: Q60
-  current_text: 今後も八戸市役所で働き続けたい
+  current_text: 今後もテスト市役所で働き続けたい
   previous: Q51
   status: 比較可
 - current: Q61

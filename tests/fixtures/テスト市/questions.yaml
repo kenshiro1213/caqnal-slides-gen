@@ -1,4 +1,4 @@
-# 八戸市 令和8年度 設問マスタ（確定版）。header は CSV ヘッダー verbatim。
+# テスト市 令和8年度 設問マスタ（確定版）。header は CSV ヘッダー verbatim。
 # adapter: hachinohe
 # 確認事項: Q43/Q52 の逆転、Q56 の管理職限定は CAQNAL 確認のうえ設定。
 - id: Q1
@@ -274,8 +274,8 @@
 - id: Q22
   'no': 22
   column: 21
-  header: Q22.八戸市役所内に目標にしたい人物がいる
-  text: 八戸市役所内に目標にしたい人物がいる
+  header: Q22.テスト市役所内に目標にしたい人物がいる
+  text: テスト市役所内に目標にしたい人物がいる
   axis: 働きがい
   category: 今後の目標やビジョンについて
   role: driver
@@ -682,8 +682,8 @@
 - id: Q58
   'no': 58
   column: 57
-  header: 【総合的な質問】Q58.八戸市役所で働いていることに満足している
-  text: 八戸市役所で働いていることに満足している
+  header: 【総合的な質問】Q58.テスト市役所で働いていることに満足している
+  text: テスト市役所で働いていることに満足している
   axis: その他
   category: 総合的な質問
   role: outcome
@@ -704,8 +704,8 @@
 - id: Q60
   'no': 60
   column: 59
-  header: Q60.今後も八戸市役所で働き続けたい
-  text: 今後も八戸市役所で働き続けたい
+  header: Q60.今後もテスト市役所で働き続けたい
+  text: 今後もテスト市役所で働き続けたい
   axis: その他
   category: 総合的な質問
   role: outcome

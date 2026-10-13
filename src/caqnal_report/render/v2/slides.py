@@ -293,7 +293,7 @@ def summary_results(ctx: Ctx, spec: dict) -> None:
 def summary_state(ctx: Ctx, spec: dict) -> None:
     th, d = ctx.th, ctx.d
     rows_in = (d.compose.get("summary_state") or [])
-    p = ctx.page(_chap(ctx, spec, "組織状態・示唆・解決策"),
+    p = ctx.page(_chap(ctx, spec, "サマリー｜組織状態・示唆・解決策"),
                  d.text("summary_state_message") or f"{PLACEHOLDER} 現在の組織状態を一文で（interpretation.yaml の insights.summary_state_message）",
                  chapter=_chapter(ctx, spec, "サマリー"),
                  note="事実から導いた解釈と協議案。解釈は仮説であり、各職場の業務と運用で確かめる。")

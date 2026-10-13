@@ -1,4 +1,4 @@
-# 八戸市 令和7年度 設問マスタ（確定版）。R8 との対応は yoy_map.yaml。
+# テスト市 令和7年度 設問マスタ（確定版）。R8 との対応は yoy_map.yaml。
 # adapter: hachinohe
 - id: Q1
   'no': 1
@@ -261,8 +261,8 @@
 - id: Q21
   'no': 21
   column: 20
-  header: Q21.八戸市役所内に目標にしたい人物がいる
-  text: 八戸市役所内に目標にしたい人物がいる
+  header: Q21.テスト市役所内に目標にしたい人物がいる
+  text: テスト市役所内に目標にしたい人物がいる
   axis: 働きがい
   category: 今後の目標やビジョンについて
   role: driver
@@ -571,8 +571,8 @@
 - id: Q49
   'no': 49
   column: 48
-  header: 【総合的な質問】Q49.八戸市役所で働いていることに満足している
-  text: 八戸市役所で働いていることに満足している
+  header: 【総合的な質問】Q49.テスト市役所で働いていることに満足している
+  text: テスト市役所で働いていることに満足している
   axis: その他
   category: 総合的な質問
   role: outcome
@@ -593,8 +593,8 @@
 - id: Q51
   'no': 51
   column: 50
-  header: Q51.今後も八戸市役所で働き続けたい
-  text: 今後も八戸市役所で働き続けたい
+  header: Q51.今後もテスト市役所で働き続けたい
+  text: 今後もテスト市役所で働き続けたい
   axis: その他
   category: 総合的な質問
   role: outcome

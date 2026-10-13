@@ -25,13 +25,13 @@ uv run caqnal validate --client 八戸市        # 入力チェック
 uv run caqnal analyze  --client 八戸市        # → local-governments/八戸市/output/intermediate/
 uv run caqnal render   --client 八戸市 --pdf  # → output/*.pptx, 部局別/*.pptx, 分析手法解説_社内向け.pptx, *.xlsx, *.pdf
 uv run caqnal all      --client 八戸市 --pdf  # 上記を一括
-uv run caqnal verify   --client 八戸市        # 2回実行してバイト一致を確認
+uv run caqnal verify-v1 --client 八戸市       # 2回実行してバイト一致を確認（旧仕様）
 uv run caqnal render   --client 八戸市 --font meiryo --pdf   # Meiryo UI 版を output/font_meiryo/ に出力
 uv run pytest                                 # 合成データでの回帰テスト
 ```
 新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
 
-> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）、`caqnal report --client X`（読者別 PPTX → `output/runs/<run_id>/render/`。途中の aggregate / models / publish / compose も個別に実行できる）。
+> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）、`caqnal report --client X`（読者別 PPTX → `output/runs/<run_id>/render/`。途中の aggregate / models / publish / compose も個別に実行できる）、`caqnal verify --client X [--images]`（品質検証 → `qa/qa_report.md`）、`caqnal signoff --client X --reviewer 名前 --checked interpretation,sources,pages,editable`（人の確認を記録。NG・未完が無ければ release_ready になり `output/release/<run_id>/` に納品版を複製）。
 
 ## ディレクトリ
 | パス | 内容 |
@@ -42,7 +42,7 @@ uv run pytest                                 # 合成データでの回帰テ�
 | `slides-master/` | カクナルスライド.pptx（テンプレート） |
 | `spec/` | `自治体向け/`: 現行の引継ぎ手順書 v2.0（docx）と佐賀市のサンプル PPTX（全庁・所属長・人事）。直下の docx は旧仕様 v1 |
 | `docs/` | 仕様書要約（v2 現行・v1 旧）・参考デッキ構成・スライドマスター仕様・データ形式メモ・参考実装メモ・計画・オンボーディング手順（原本を開かずに参照するための md） |
-| `tests/` | 合成データ（八戸市スキーマ、seed 固定）による回帰テスト |
+| `tests/` | 合成データ（テスト市。八戸市と同じ設問構成、seed 固定）による回帰テスト |
 
 ## 設計の要点
 - 3 ステージはファイルでのみ結合（`data/` → `output/intermediate/` → `output/*.pptx`）。render は中間 CSV/JSON だけを読む

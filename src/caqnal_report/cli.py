@@ -7,7 +7,7 @@
   caqnal analyze  --client 八戸市
   caqnal render   --client 八戸市 [--deck 全庁|部局別|1pager|excel|all] [--pdf]
   caqnal all      --client 八戸市 [--pdf]
-  caqnal verify   --client 八戸市
+  caqnal verify-v1 --client 八戸市   （旧仕様: 2回実行して再現性を確認）
 
   v2 工程（output/runs/<run_id>/ に記録）
   caqnal run       --client 八戸市 [--new | --run RUN_ID]
@@ -17,6 +17,9 @@
   caqnal publish   --client 八戸市 [--run RUN_ID]
   caqnal compose   --client 八戸市 [--run RUN_ID]
   caqnal report    --client 八戸市 [--run RUN_ID]   （読者別 PPTX まで）
+  caqnal verify    --client 八戸市 [--run RUN_ID] [--images]   （品質検証 → run/qa/qa_report.md）
+  caqnal signoff   --client 八戸市 --reviewer 名前 --checked interpretation,sources,pages,editable
+                   （人の確認を記録して verify をやり直す。揃えば release_ready → output/release/<run_id>/）
 """
 from __future__ import annotations
 
@@ -186,10 +189,32 @@ def cmd_run(args) -> None:
 
 
 def _cmd_step(args) -> None:
-    from .steps import open_or_create, run_until
+    from .steps import open_or_create, run_until, step_verify
 
     run = open_or_create(_client(args), args.run, new=args.new)
-    ok = run_until(run, "render" if args.cmd == "report" else args.cmd)
+    if args.cmd == "verify":                     # 検証は毎回やり直す（確認記録の後にも使う）
+        ok = run_until(run, "render") and step_verify(run, images=args.images)
+    else:
+        ok = run_until(run, "render" if args.cmd == "report" else args.cmd)
+    print(run.summary())
+    if not ok:
+        sys.exit(1)
+
+
+def cmd_signoff(args) -> None:
+    from .qa.verify import write_signoff
+    from .run import Run
+    from .steps import step_verify
+
+    cfg = _client(args)
+    run = Run.open(cfg, args.run) if args.run else Run.latest(cfg)
+    if run is None or (run.step("render") or {}).get("state") != "passed":
+        print("render 済みの run がありません（caqnal report を先に実行）")
+        sys.exit(1)
+    rec = write_signoff(run, args.reviewer, [c.strip() for c in args.checked.split(",") if c.strip()], args.date,
+                        args.note)
+    print(f"確認記録 → {run.dir / 'signoff.json'}  {rec['reviewer']} {rec['date']} {rec['checked']}")
+    ok = step_verify(run)
     print(run.summary())
     if not ok:
         sys.exit(1)
@@ -223,7 +248,7 @@ def main(argv: list[str] | None = None) -> None:
 
     for name, fn, hlp in [("validate", cmd_validate, "入力チェック（仕様書1-3）"),
                           ("analyze", cmd_analyze, "解析 → output/intermediate/"),
-                          ("verify", cmd_verify, "2回実行して再現性を確認")]:
+                          ("verify-v1", cmd_verify, "旧仕様: 2回実行して再現性を確認")]:
         p = sub.add_parser(name, help=hlp)
         add_client(p)
         p.set_defaults(func=fn)
@@ -246,12 +271,25 @@ def main(argv: list[str] | None = None) -> None:
                           ("models", _cmd_step, "v2: 重回帰・決定木・検証・採否候補（run/private/models/）"),
                           ("publish", _cmd_step, "v2: 秘匿と読者別の公開データ（run/public/<読者>/）"),
                           ("compose", _cmd_step, "v2: 公開データ＋interpretation.yaml → 読者別の文章"),
-                          ("report", _cmd_step, "v2: 読者別 PPTX まで作る（run/render/）")]:
+                          ("report", _cmd_step, "v2: 読者別 PPTX まで作る（run/render/）"),
+                          ("verify", _cmd_step, "v2: 品質検証（run/qa/）。人の確認記録が揃えば release_ready")]:
         p = sub.add_parser(name, help=hlp)
         add_client(p)
         p.add_argument("--run", default=None, help="run_id（省略時は最新。設定・原資料が変わっていれば新しい run）")
         p.add_argument("--new", action="store_true", help="新しい run を作る")
+        if name == "verify":
+            p.add_argument("--images", action="store_true", help="全頁を PNG に書き出す（run/qa/pages/）")
         p.set_defaults(func=fn)
+
+    p = sub.add_parser("signoff", help="v2: 人の確認を記録して verify をやり直す")
+    add_client(p)
+    p.add_argument("--run", default=None)
+    p.add_argument("--reviewer", required=True, help="確認者")
+    p.add_argument("--checked", required=True,
+                   help="確認した項目（カンマ区切り）: interpretation,sources,pages,editable")
+    p.add_argument("--date", default=None, help="確認日（省略時は今日）")
+    p.add_argument("--note", default="")
+    p.set_defaults(func=cmd_signoff)
 
     args = ap.parse_args(argv)
     from .run import RunError

@@ -168,8 +168,35 @@ def step_render(run: Run) -> bool:
     return True
 
 
+def step_verify(run: Run, images: bool = False) -> bool:
+    from .qa.verify import release, verify, write_report
+
+    run.require("verify")
+    rep = verify(run, images=images)
+    paths = write_report(rep, run.step_dir("verify"))
+    ng = [c for c in rep.checks if c.status == "ng"]
+    pending = [f"{c.id}: {c.detail}" for c in rep.checks if c.status in ("open", "manual")]
+    run.record("verify", "failed" if ng else "passed", outputs=paths, unresolved=pending,
+               warnings=[f"{c.id}: {c.detail}" for c in ng],
+               status="release_ready" if rep.release_ready else "draft_qa_pending",
+               extra={"fingerprint": rep.fingerprint, "signoff": rep.signoff})
+    print(f"[verify] {'failed' if ng else 'passed'} → {paths[1]}")
+    print(f"  NG {rep.count('ng')} / 未完 {rep.count('open')} / 人の確認 {rep.count('manual')} / OK {rep.count('ok')}")
+    for c in ng:
+        print(f"  NG   {c.id}: {c.detail}")
+        for it in c.items[:5]:
+            print(f"         - {it}")
+    for c in rep.checks:
+        if c.status == "open":
+            print(f"  未完 {c.id}: {c.detail}")
+    if rep.release_ready:
+        print(f"  release_ready → {release(run, rep)}")
+    return not ng
+
+
 STEP_FUNCS = {"validate": step_validate, "normalize": step_normalize, "aggregate": step_aggregate,
-              "models": step_models, "publish": step_publish, "compose": step_compose, "render": step_render}
+              "models": step_models, "publish": step_publish, "compose": step_compose, "render": step_render,
+              "verify": step_verify}
 
 
 def run_until(run: Run, last: str) -> bool:
