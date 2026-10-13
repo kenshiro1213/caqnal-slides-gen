@@ -31,7 +31,7 @@ uv run pytest                                 # 合成データでの回帰テ�
 ```
 新しい自治体の追加は `docs/自治体オンボーディング手順.md`。
 
-> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行仕様の要約は `docs/仕様書要約_自治体共通版v2.md`、サンプル（佐賀市）の頁構成は `docs/参考デッキ構成_佐賀市v2.md`、移行計画と進捗は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）、`caqnal report --client X`（読者別 PPTX → `output/runs/<run_id>/render/`。途中の aggregate / models / publish / compose も個別に実行できる）、`caqnal verify --client X [--images]`（品質検証 → `qa/qa_report.md`）、`caqnal signoff --client X --reviewer 名前 --checked interpretation,sources,pages,editable`（人の確認を記録。NG・未完が無ければ release_ready になり `output/release/<run_id>/` に納品版を複製）、`caqnal method --client X`（社内向け 分析手法解説 → `output/runs/<run_id>/internal/`）。
+> **仕様 v2（自治体共通版 2026-10-08）へ移行中。** 現行の仕様は `docs/仕様書/`（佐賀市のサンプル PPTX を正として起こした版）、CAQNAL への確認事項は `docs/CAQNAL確認事項.md`、計画は `docs/PLAN.md`。上のコマンドは v1 実装のもの。v2 の工程は実装した分から使える: `caqnal run --client X`（run の状態）、`caqnal normalize --client X`（原資料 → `output/runs/<run_id>/private/normalized/`）、`caqnal report --client X`（読者別 PPTX → `output/runs/<run_id>/render/`。途中の aggregate / models / publish / compose も個別に実行できる）、`caqnal verify --client X [--images]`（品質検証 → `qa/qa_report.md`）、`caqnal signoff --client X --reviewer 名前 --checked interpretation,sources,pages,editable`（人の確認を記録。NG・未完が無ければ release_ready になり `output/release/<run_id>/` に納品版を複製）、`caqnal method --client X`（社内向け 分析手法解説 → `output/runs/<run_id>/internal/`）。
 
 ## ディレクトリ
 | パス | 内容 |
